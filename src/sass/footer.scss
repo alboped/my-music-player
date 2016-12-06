@@ -1,0 +1,38 @@
+.footer {
+	flex: none;
+	height: 50px;
+	background-color: #f6f6f8;
+	border-top: 1px solid $border-color;
+	display: flex;
+}
+
+/* 播放操作栏 */
+.player-btn-bar {
+	width: 200px;
+	height: 100%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	.player-prev, .player-next {
+		font-size: 34px;
+	}
+	.player-start {
+		font-size: 38px;
+		padding: 0 20px;
+	}
+	.player-prev, .player-next, .player-start {
+		&:hover {
+			color: rgb(81, 171, 249);
+		}
+	}
+}
+
+/* 播放进度栏 */
+.music-plan-bar {
+	flex: 1;
+}
+
+/* 播放列表 */
+.player-list {
+	
+}

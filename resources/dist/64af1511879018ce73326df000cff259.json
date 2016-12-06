@@ -1,0 +1,23 @@
+{
+	"pageList": {
+		"title": "推荐",
+		"list": [
+			{
+				"name": "发现音乐",
+				"icon": "yinle"
+			}, {
+				"name": "私人FM",
+				"icon": "diantai"
+			}
+		]
+	},
+	"myMusicList": {
+		"name": "我的音乐",
+		"list": [
+			{
+				"name": "本地音乐",
+				"icon": "iconfontbiaozhunmoban01"
+			}
+		]
+	}
+}

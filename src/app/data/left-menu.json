@@ -1,0 +1,28 @@
+{
+	"pageList": [
+		{
+			"name": "发现音乐",
+			"icon": "yinle",
+			"link": "/index/music-main"
+		}, {
+			"name": "私人FM",
+			"icon": "diantai",
+			"link": "/index/radio"
+		}
+	],
+	"myMusicList": [
+		{
+			"name": "本地音乐",
+			"icon": "iconfontbiaozhunmoban01",
+			"link": "/index/local-music"
+		}, {
+			"name": "下载管理",
+			"icon": "xiazai",
+			"link": "/index/download-manage"
+		}, {
+			"name": "我的歌手",
+			"icon": "ttpodicon1",
+			"link": "/index/my-singer"
+		}
+	]
+}

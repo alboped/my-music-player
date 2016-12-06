@@ -1,0 +1,62 @@
+@charset 'utf-8';
+
+$theme-color: rgb(68, 170, 248); // 主题色-blue;
+$theme-red: rgb(198, 47, 47); // 主题色-red;
+
+#app {
+	width: 100%;
+	height: 100%;
+}
+
+@mixin theme($color: $theme-color) {
+	.theme-bg {
+		background-color: $color;
+	}
+	.theme-bg-h {
+		&:hover {
+			background-color: $color;
+		}
+	}
+	.theme-border {
+		border-color: $color;
+	}
+	.theme-border-a {
+		&.active {
+			border-color: $color;
+		}
+	}
+	.theme-fcolor {
+		color: $color;
+	}
+	.theme-fcolor-h-a {
+		&:hover, &.active {
+			color: $color;
+		}
+	}
+}
+
+.main {
+	display: flex;
+	flex-direction: column;
+	width: 100%;
+	height: 100%;
+	min-width: 1022px;
+	min-height: 670px;
+	overflow: hidden;
+
+	/* 主题样式 blue */
+	&.theme-blue {
+		@include theme($theme-color); 
+	}
+
+	/* 主题样式 red */
+	&.theme-red {
+		@include theme($theme-red); 
+	}
+}
+
+@import './base';
+@import './header';
+@import './content';
+@import './footer';
+@import './music-main/main';

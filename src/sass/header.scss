@@ -1,0 +1,112 @@
+/* 标题栏 */
+.header {
+	width: 100%;
+	flex: none;
+	height: 50px;
+	color: #fff;
+	-webkit-app-region: drag;
+	.logo {
+		line-height: 50px;
+		font-size: 18px;
+		display: inline-block;
+		margin-left: 16px;
+	}
+	.logo-link {
+		color: #fff;
+		font-family: '微软雅黑';
+	}
+	.logo-icon {
+		font-size: 20px;
+	}
+}
+
+.search-bar {
+	margin-left: 60px;
+	height: 100%;
+	color: #fff;
+	.page-left, .page-right {
+		width: 27px;
+		height: 22px;
+		color: #fff;
+		border: 1px solid rgba(64, 64, 64, .2);
+		margin-top: 14px;
+		line-height: 20px;
+		text-align: center;
+		&.page-end {
+			color: #ddd;	
+		}
+	}
+	.page-left {
+		border-right: 0;
+		border-radius: 3px 0 0 3px;
+	}
+	.page-right {
+		border-radius: 0 3px 3px 0;
+	}
+}
+
+.search-text {
+	margin-left: 10px;
+	width: 218px;
+	height: 22px;
+	border: 0;
+	border-radius: 11px;
+	margin-top: 14px;
+	padding: 0 10px;
+	padding-right: 24px;
+	background-color: rgba(47, 47, 47, .2);
+	color: #fff;
+	font-size: 12px;
+	font-family: '微软雅黑';
+	&:focus {
+		outline: none;
+	}
+	&::-webkit-input-placeholder {
+		color: #fff;
+		opacity: .3;
+		font-family: 'Serif';
+	}
+}
+
+.search-icon {
+	line-height: 50px;
+	color: #fff;
+	font-size: 13px;
+	margin-left: -25px;
+	opacity: .5;
+	&:hover {
+		opacity: 1;
+	}
+}
+
+.window-bar, .setting-bar {
+	line-height: 20px;
+	margin-top: 15px;
+	color: #fff;
+	.top-btn {
+		opacity: .7;
+		color: #fff;
+		&:hover {
+			opacity: 1;
+		}
+	}
+}
+
+.window-bar {
+	margin-right: 16px;
+	padding-left: 8px;
+	border-left: 1px solid rgba(0, 0, 0, 0.1);
+	height: 20px;
+	.top-btn {
+		font-size: 14px;
+		margin-left: 9px;
+	}
+}
+
+.setting-bar {
+	padding-right: 18px;
+	.top-btn {
+		font-size: 18px;
+		margin-left: 20px;
+	}
+}

@@ -1,0 +1,21 @@
+[
+	{
+		"name": "个性推荐",
+		"link": "recommend"
+	}, {
+		"name": "歌单",
+		"link": "song-menu"
+	}, {
+		"name": "主播电台",
+		"link": "anchor-radio"
+	}, {
+		"name": "排行榜",
+		"link": "ranking"
+	}, {
+		"name": "歌手",
+		"link": "singer"
+	}, {
+		"name": "最新音乐",
+		"link": "new-music"
+	}
+]

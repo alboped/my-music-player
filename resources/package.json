@@ -1,0 +1,14 @@
+{
+	"name": "my_music_player",
+	"main": "index.html",
+	"version": "0.0.1",
+	"window": {
+		"width": 1022,
+		"height": 670,
+		"min_width": 1022,
+		"min_height": 670,
+		"frame": false,
+		"toolbar": true,
+		"transparent": true
+	}
+}

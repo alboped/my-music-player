@@ -1,0 +1,278 @@
+/* 轮播图 */
+.carousel {
+	margin-top: 20px;
+	.carousel-img {
+		position: relative;
+		height: 200px;
+		.carousel-item {
+			width: 500px;
+			height: 180px;
+			position: absolute;
+			bottom: 2px;
+			left: 50%;
+			z-index: -1;
+			margin-left: -250px;
+			transition: all 550ms;
+			&.carousel-current {
+				z-index: 2;
+				width: 540px;
+				height: 200px;
+				left: 50%;
+				margin-left: -270px;
+				bottom: 0;
+			}
+			&.carousel-current-prev, 
+			&.carousel-current-next {
+				z-index: 1;
+				width: 513px;
+				height: 190px;
+				bottom: 0;
+				&.carousel-current-prev {
+					left: 0;
+					margin-left: 0;
+				}
+				&.carousel-current-next {
+					left: initial;
+					right: 0;
+					// margin-left: 0;
+				}
+				&:after {
+					content: '';
+					position: absolute;
+					left: 0;
+					top: 0;
+					width: 100%;
+					height: 100%;
+					background-color: rgb(0, 0, 0);
+					opacity: .5;
+				}
+			}
+			.carousel-item-img {
+				width: 100%;
+				height: 100%;
+			}
+		}
+	}
+}
+
+.carousel-prev, .carousel-next {
+	position: absolute;
+	top: 60px;
+	color: rgba(255, 255, 255, 0);
+	font-size: 24px;
+	line-height: 80px;
+	padding: 0 10px;
+	z-index: 9;
+	&:hover {
+		color: rgba(255, 255, 255, 0.6);
+	}
+}
+
+.carousel-prev {
+	left: 0;
+}
+
+.carousel-next {
+	right: 0;
+}
+
+.carousel-page {
+	display: flex;
+	justify-content: center;
+	width: 100%;
+	margin-top: 12px;
+	.carousel-page-item {
+		width: 18px;
+		height: 5px;
+		margin: 0 3px;
+		padding-bottom: 3px;
+		cursor: pointer;
+		&:hover, &.carousel-page-current {
+			.carousel-page-link {
+				@extend .theme-bg;
+			}
+		}
+		.carousel-page-link {
+			display: block;
+			height: 100%;
+			background-color: rgb(200, 200, 200);
+		}
+	}
+}
+
+/* 推荐页标题 */
+.re-item-title {
+	font-family: '微软雅黑';
+	font-size: 18px;
+	margin: 0;
+	line-height: 36px;
+	border-bottom: 1px solid #ddd;
+	color: #333;
+	margin-bottom: 10px;
+}
+/* 推荐页面更多链接 */
+.recommend-detail-link {
+	color: #666;
+	font-size: 12px;
+	&:hover {
+		color: #444;
+	}
+}
+
+/* 推荐歌单 */
+.re-song-menu {
+	.re-song-menu-list {
+		$item-margin: 18px;
+		display: flex;
+		flex-wrap: wrap;
+		justify-content: space-between;
+		margin-left: -$item-margin;
+		.re-song-menu-item {
+			position: relative;
+			flex-basis: 20%;
+			padding-left: $item-margin;
+			.re-song-img {
+				width: 100%;
+				border: 1px solid rgba(0, 0, 0, .1);
+			}
+			.re-song-title {
+				height: 78px;
+				margin: 0;
+				line-height: 20px;
+			}
+			.re-song-num-bar {
+				position: absolute;
+				top: 0;
+				right: 0;
+				background: linear-gradient(to right, transparent, rgba(0, 0, 0, .3));
+				color: #fff;
+				width: 55%;
+				line-height: 20px;
+				text-align: right;
+				padding-right: 7px;
+				.re-song-num-icon {
+					font-size: 12px;
+				}
+				.re-song-num {
+					font-family: '微软雅黑';
+					text-shadow: 1px 1px 1px #444;
+				}
+			}
+			.re-play-icon {
+				position: absolute;
+				right: 6px;
+				bottom: 6px;
+				font-size: 26px;
+				opacity: 0;
+				transition: opacity 300ms;
+			}
+			.re-song-item-link {
+				display: block;
+				position: relative;
+				line-height: 0;
+				margin-bottom: 3px;
+				&:hover .start-play-icon {
+					opacity: 1;
+				}
+			}
+		}
+	}
+}
+
+.start-play-icon {	
+	color: #fff;
+	background: rgba(0, 0, 0, .3);
+	border-radius: 50%;
+}
+
+/* 新碟列表 */
+.re-new-music-list {
+	display: flex;
+	flex-direction: column;
+	flex-wrap: wrap;
+	height: 302px;
+	border: 1px solid rgb(238, 238, 238);
+	border-right: 0;
+	margin-bottom: 50px;
+	.re-new-music-item {
+		flex: 0 0 20%;
+		height: 60px;
+		display: flex;
+		align-items: center;
+		border-right: 1px solid rgb(238, 238, 238);
+		&:nth-child(2n) {
+			background: rgb(245, 245, 247);
+		}
+		&:nth-child(5)~.re-new-music-item {
+			&:nth-child(2n) {
+				background: transparent;
+			}
+			&:nth-child(2n-1) {
+				background: rgb(245, 245, 247);
+			}
+		}
+		&:hover {
+			background: rgb(236, 237, 238) !important;
+		}
+		.re-new-music-index {
+			font-family: '微软雅黑';
+			width: 40px;
+			text-align: center;
+			color: #aaa;
+		}
+		.re-music-pic {
+			display: block;
+			width: 40px;
+			height: 40px;
+			position: relative;
+		}
+		.re-music-img {
+			width: 100%;
+			height: 100%;
+		}
+		.re-music-play-icon {
+			position: absolute;
+			top: 9px;
+			left: 9px;
+			font-size: 22px;
+			transition: background 400ms;
+			&:hover {
+				background: rgba(0, 0, 0, .5);
+			}
+		}
+		.re-new-music-name, .re-new-music-singer {
+			line-height: 20px;
+			margin: 0;
+			padding-left: 10px;
+		}
+		.re-new-music-singer {
+			color: #888;
+		}
+	}
+}
+
+.re-mv {
+	margin-bottom: 50px;
+	.re-mv-list {
+		display: flex;
+		margin-left: -18px;
+		.re-mv-item {
+			flex-grow: 1;
+			margin-left: 18px;
+			.re-mv-img {
+				width: 100%;
+				border: 1px solid rgba(0, 0, 0, .1);
+			}
+		}
+	}
+	.re-mv-item-title, .re-mv-item-singer {
+		margin: 0;
+		line-height: 20px;
+	}
+	.re-mv-item-title {
+		font-family: '微软雅黑';
+	}
+	.re-mv-item-singer {
+		color: #777;
+	}
+}

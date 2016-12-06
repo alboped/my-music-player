@@ -1,0 +1,15 @@
+[
+	{
+		"name": "我喜欢的音乐",
+		"icon": "ego-heart",
+		"link": "/index/song-list/5"
+	}, {
+		"name": "动漫歌曲",
+		"icon": "swticonyinle2",
+		"link": "/index/song-list/6"
+	}, {
+		"name": "电影音乐",
+		"icon": "swticonyinle2",
+		"link": "/index/song-list/7"
+	}
+]
