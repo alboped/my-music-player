@@ -6,7 +6,8 @@ module.exports = {
 	output: {
 		path: path.resolve(__dirname, './resources/dist'),
 		publicPath: './dist/',
-		filename: 'build.js'
+		filename: 'build.js',
+		chunkFilename: '[name].min.js'
 	},
 	module: {
 		loaders: [{
@@ -36,7 +37,7 @@ module.exports = {
 	},
 	plugins: [
 		new htmlWebpackPlugin({
-			title: 'MyMusicPlayer',
+			title: 'my music player',
 			filename: '../index.html',
 			template: './src/index.html',
 			cache: true,

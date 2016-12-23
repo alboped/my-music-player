@@ -20,6 +20,7 @@
 	}
 }
 
+/* 搜索栏 */
 .search-bar {
 	margin-left: 60px;
 	height: 100%;
@@ -45,6 +46,7 @@
 	}
 }
 
+/* 搜索框 */
 .search-text {
 	margin-left: 10px;
 	width: 218px;
@@ -68,6 +70,7 @@
 	}
 }
 
+/* 搜索按钮 */
 .search-icon {
 	line-height: 50px;
 	color: #fff;
@@ -79,11 +82,12 @@
 	}
 }
 
+/* 设置按钮 */
 .window-bar, .setting-bar {
 	line-height: 20px;
 	margin-top: 15px;
 	color: #fff;
-	.top-btn {
+	.top-btn-icon {
 		opacity: .7;
 		color: #fff;
 		&:hover {
@@ -92,6 +96,7 @@
 	}
 }
 
+/* 窗口操作栏 */
 .window-bar {
 	margin-right: 16px;
 	padding-left: 8px;
@@ -103,10 +108,95 @@
 	}
 }
 
+/* 头部设置栏 */
 .setting-bar {
-	padding-right: 18px;
+	padding-right: 8px;
 	.top-btn {
 		font-size: 18px;
-		margin-left: 20px;
+	}
+	.setting-bar-item {
+		position: relative;
+		display: flex;
+		justify-content: center;
+		margin: 0 10px;
+	}
+}
+
+/* 主题设置窗口样式 */
+.theme-style-model {
+	position: absolute;
+	top: 35px;
+	z-index: 3;
+	padding: 15px;
+	width: 320px;
+	background-color: #fff;
+	border-radius: 3px;
+	box-shadow: 0 0 10px rgba(0, 0, 0, .4);
+	.model-front {
+		display: block;
+		text-align: center;
+		width: 100%;
+		&:after {
+			$width: 10px;
+			content: '';
+			margin-left: -$width;
+			@include model-front($width);
+		}
+	}
+	.theme-tab {
+		border-bottom: 1px solid #ccc;
+		margin-bottom: 15px;
+		.theme-tab-item {
+			color: #555;
+			font-size: 13px;
+			margin-right: 16px;
+			border-bottom: 2px solid transparent;
+			margin-bottom: -1px;
+			&:hover {
+				color: #000;
+			}
+			&.active {
+				border-bottom: 2px solid #555;
+				color: #000;
+			}
+		}
+	}
+	.theme-box {
+		.theme-ul {
+			$margin: 5px;
+			display: flex;
+			margin-right: -$margin;
+			margin-bottom: -$margin;
+			flex-wrap: wrap;
+			.theme-item {
+				flex-basis: 33.33%;
+				padding: 0 $margin $margin 0;
+				.theme-toggle-link {
+					display: block;
+					height: 90px;
+					padding: 2px;
+					border-style: solid;
+					border-width: 0;
+					&:hover {
+						padding: 1px;
+						border-width: 1px;
+					}
+					.theme-item-box {
+						position: relative;
+						width: 100%;
+						height: 100%;
+						.theme-name {
+							position: absolute;
+							line-height: 20px;
+							left: 0;
+							bottom: 0;
+							width: 100%;
+							padding-left: 4px;
+							background-color: rgba(0, 0, 0, 0.2);
+						}
+					}
+				}
+			}
+		}
 	}
 }

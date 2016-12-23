@@ -43,6 +43,7 @@ $left-bg-color: #fafafa;
 	}
 }
 
+/* 左侧菜单容器 */
 .left-menu {
 	// font-size: 13px;
 	.left-menu-title {
@@ -58,6 +59,7 @@ $left-bg-color: #fafafa;
 	}
 }
 
+/* 左侧菜单 */
 .left-menu-list {
 	.left-list-item {
 		line-height: 32px;
@@ -89,9 +91,55 @@ $left-bg-color: #fafafa;
 	}
 }
 
+/* 当前播放音乐信息 */
 .player-info {
 	flex: 0 0 60px;
 	border-top: 1px solid $border-color;
+	display: flex;
+	.song-pic-box {
+		position: relative;
+		width: 60px;
+		height: 60px;
+		line-height: 60px;
+		cursor: pointer;
+		&:hover .song-pic-icon {
+			display: block;
+		}
+	}
+	.song-pic-small {
+		width: 100%;
+		height: 100%;
+	}
+	.song-pic-icon {
+		display: none;
+		position: absolute;
+		top: 0;
+		left: 0;
+		width: 100%;
+		height: 100%;
+		background-color: rgba(0, 0, 0, 0.4);
+		font-size: 40px;
+		color: #eee;
+		text-align: center;
+	}
+	.music-bar-song-name {
+		font-size: 15px;
+		margin-top: 12px;
+		margin-bottom: 0;
+		padding-left: 8px;
+		line-height: 1;
+	}
+	.music-bar-like-icon {
+		font-size: 17px;
+	}
+	.song-name-text {
+		width: 103px;
+	}
+	.music-bar-singer-name {
+		margin-top: 4px;
+		padding-left: 8px;
+		width: 110px;
+	}
 }
 
 .main-info {

@@ -2,7 +2,7 @@
 	<div class="carousel">
 		<div class="carousel-img">
 			<ul class="carousel-img-list">
-				<li v-for="(img, index) in imgList" 
+				<li v-for="(img, index) in carouselList" 
 					v-bind:class="{'carousel-item': true, 
 						'carousel-current': index == showImgIndex.current, 
 						'carousel-current-prev': index == showImgIndex.prev, 
@@ -21,7 +21,7 @@
 			</a>
 		</div>
 		<ul class="carousel-page">
-			<li v-for="(info, index) in imgList" 
+			<li v-for="(info, index) in carouselList" 
 				v-bind:class="{
 					'carousel-page-item': true, 
 					'carousel-page-current': index == showImgIndex.current
@@ -34,8 +34,7 @@
 </template>
 
 <script>
-	import icon from '../../../common/icon.vue';
-	import $ from 'jquery';
+	import icon from '../../../common/icon';
 
 	export default {
 		data() {
@@ -47,13 +46,15 @@
 				}
 			}
 		},
-		props: [
-			'imgList'
-		],
+		computed: {
+			carouselList() {
+				return this.$store.state.reStore.mainPage.carousel;
+			}
+		},
 		methods: {
 			indexModified(type, name) {
 				let current = this.showImgIndex.current,
-					len = this.imgList.length;
+					len = this.carouselList.length;
 
 				if(type){
 					current <= 0

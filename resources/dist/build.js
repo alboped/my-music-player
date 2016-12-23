@@ -58,88 +58,86 @@
 
 	var _vueRouter2 = _interopRequireDefault(_vueRouter);
 
-	var _vueResource = __webpack_require__(133);
+	var _vuex = __webpack_require__(38);
 
-	var _vueResource2 = _interopRequireDefault(_vueResource);
+	var _vuex2 = _interopRequireDefault(_vuex);
 
-	var _dataApi = __webpack_require__(134);
+	var _store = __webpack_require__(39);
 
-	var _dataApi2 = _interopRequireDefault(_dataApi);
+	var _store2 = _interopRequireDefault(_store);
 
-	var _numberFilter = __webpack_require__(38);
+	var _numberFilter = __webpack_require__(70);
 
 	var _numberFilter2 = _interopRequireDefault(_numberFilter);
 
-	var _app = __webpack_require__(39);
+	var _app = __webpack_require__(71);
 
 	var _app2 = _interopRequireDefault(_app);
 
-	var _main = __webpack_require__(66);
+	var _main = __webpack_require__(100);
 
 	var _main2 = _interopRequireDefault(_main);
 
-	var _main3 = __webpack_require__(75);
+	var _main3 = __webpack_require__(112);
 
 	var _main4 = _interopRequireDefault(_main3);
 
-	var _main5 = __webpack_require__(78);
+	var _main5 = __webpack_require__(115);
 
 	var _main6 = _interopRequireDefault(_main5);
 
-	var _radio = __webpack_require__(82);
+	var _radio = __webpack_require__(119);
 
 	var _radio2 = _interopRequireDefault(_radio);
 
-	var _mySongList = __webpack_require__(85);
+	var _mySongList = __webpack_require__(122);
 
 	var _mySongList2 = _interopRequireDefault(_mySongList);
 
-	var _localMusic = __webpack_require__(88);
+	var _localMusic = __webpack_require__(125);
 
 	var _localMusic2 = _interopRequireDefault(_localMusic);
 
-	var _downloadManage = __webpack_require__(91);
+	var _downloadManage = __webpack_require__(128);
 
 	var _downloadManage2 = _interopRequireDefault(_downloadManage);
 
-	var _mySinger = __webpack_require__(94);
+	var _mySinger = __webpack_require__(131);
 
 	var _mySinger2 = _interopRequireDefault(_mySinger);
 
-	var _main7 = __webpack_require__(97);
+	var _main7 = __webpack_require__(134);
 
 	var _main8 = _interopRequireDefault(_main7);
 
-	var _songMenu = __webpack_require__(113);
+	var _songMenu = __webpack_require__(149);
 
 	var _songMenu2 = _interopRequireDefault(_songMenu);
 
-	var _anchorRadio = __webpack_require__(116);
+	var _anchorRadio = __webpack_require__(152);
 
 	var _anchorRadio2 = _interopRequireDefault(_anchorRadio);
 
-	var _ranking = __webpack_require__(119);
+	var _ranking = __webpack_require__(155);
 
 	var _ranking2 = _interopRequireDefault(_ranking);
 
-	var _singer = __webpack_require__(122);
+	var _singer = __webpack_require__(158);
 
 	var _singer2 = _interopRequireDefault(_singer);
 
-	var _newMusic = __webpack_require__(125);
+	var _newMusic = __webpack_require__(161);
 
 	var _newMusic2 = _interopRequireDefault(_newMusic);
 
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
-	__webpack_require__(128);
-	__webpack_require__(129);
+	__webpack_require__(164);
+	__webpack_require__(165);
 
 	_vue2.default.use(_vueRouter2.default);
-	_vue2.default.use(_vueResource2.default);
-	_vue2.default.use(_dataApi2.default);
 
-	/* 音乐首页标签路由 */
+	/* 推荐页面标签路由 */
 	var musicMainTabRouter = [{
 		path: '/',
 		redirect: 'recommend'
@@ -217,7 +215,7 @@
 
 	new _vue2.default({
 		router: router,
-		url: 'http://24234'
+		store: _store2.default
 	}).$mount('#app');
 
 /***/ },
@@ -10807,6 +10805,2835 @@
 
 /***/ },
 /* 38 */
+/***/ function(module, exports, __webpack_require__) {
+
+	/**
+	 * vuex v2.0.0
+	 * (c) 2016 Evan You
+	 * @license MIT
+	 */
+	(function (global, factory) {
+	   true ? module.exports = factory() :
+	  typeof define === 'function' && define.amd ? define(factory) :
+	  (global.Vuex = factory());
+	}(this, (function () { 'use strict';
+
+	var devtoolHook =
+	  typeof window !== 'undefined' &&
+	  window.__VUE_DEVTOOLS_GLOBAL_HOOK__
+
+	function devtoolPlugin (store) {
+	  if (!devtoolHook) { return }
+
+	  store._devtoolHook = devtoolHook
+
+	  devtoolHook.emit('vuex:init', store)
+
+	  devtoolHook.on('vuex:travel-to-state', function (targetState) {
+	    store.replaceState(targetState)
+	  })
+
+	  store.subscribe(function (mutation, state) {
+	    devtoolHook.emit('vuex:mutation', mutation, state)
+	  })
+	}
+
+	function applyMixin (Vue) {
+	  var version = Number(Vue.version.split('.')[0])
+
+	  if (version >= 2) {
+	    var usesInit = Vue.config._lifecycleHooks.indexOf('init') > -1
+	    Vue.mixin(usesInit ? { init: vuexInit } : { beforeCreate: vuexInit })
+	  } else {
+	    // override init and inject vuex init procedure
+	    // for 1.x backwards compatibility.
+	    var _init = Vue.prototype._init
+	    Vue.prototype._init = function (options) {
+	      if ( options === void 0 ) options = {};
+
+	      options.init = options.init
+	        ? [vuexInit].concat(options.init)
+	        : vuexInit
+	      _init.call(this, options)
+	    }
+	  }
+
+	  /**
+	   * Vuex init hook, injected into each instances init hooks list.
+	   */
+
+	  function vuexInit () {
+	    var options = this.$options
+	    // store injection
+	    if (options.store) {
+	      this.$store = options.store
+	    } else if (options.parent && options.parent.$store) {
+	      this.$store = options.parent.$store
+	    }
+	  }
+	}
+
+	function mapState (states) {
+	  var res = {}
+	  normalizeMap(states).forEach(function (ref) {
+	    var key = ref.key;
+	    var val = ref.val;
+
+	    res[key] = function mappedState () {
+	      return typeof val === 'function'
+	        ? val.call(this, this.$store.state, this.$store.getters)
+	        : this.$store.state[val]
+	    }
+	  })
+	  return res
+	}
+
+	function mapMutations (mutations) {
+	  var res = {}
+	  normalizeMap(mutations).forEach(function (ref) {
+	    var key = ref.key;
+	    var val = ref.val;
+
+	    res[key] = function mappedMutation () {
+	      var args = [], len = arguments.length;
+	      while ( len-- ) args[ len ] = arguments[ len ];
+
+	      return this.$store.commit.apply(this.$store, [val].concat(args))
+	    }
+	  })
+	  return res
+	}
+
+	function mapGetters (getters) {
+	  var res = {}
+	  normalizeMap(getters).forEach(function (ref) {
+	    var key = ref.key;
+	    var val = ref.val;
+
+	    res[key] = function mappedGetter () {
+	      if (!(val in this.$store.getters)) {
+	        console.error(("[vuex] unknown getter: " + val))
+	      }
+	      return this.$store.getters[val]
+	    }
+	  })
+	  return res
+	}
+
+	function mapActions (actions) {
+	  var res = {}
+	  normalizeMap(actions).forEach(function (ref) {
+	    var key = ref.key;
+	    var val = ref.val;
+
+	    res[key] = function mappedAction () {
+	      var args = [], len = arguments.length;
+	      while ( len-- ) args[ len ] = arguments[ len ];
+
+	      return this.$store.dispatch.apply(this.$store, [val].concat(args))
+	    }
+	  })
+	  return res
+	}
+
+	function normalizeMap (map) {
+	  return Array.isArray(map)
+	    ? map.map(function (key) { return ({ key: key, val: key }); })
+	    : Object.keys(map).map(function (key) { return ({ key: key, val: map[key] }); })
+	}
+
+	function isObject (obj) {
+	  return obj !== null && typeof obj === 'object'
+	}
+
+	function isPromise (val) {
+	  return val && typeof val.then === 'function'
+	}
+
+	function assert (condition, msg) {
+	  if (!condition) { throw new Error(("[vuex] " + msg)) }
+	}
+
+	var Vue // bind on install
+
+	var Store = function Store (options) {
+	  var this$1 = this;
+	  if ( options === void 0 ) options = {};
+
+	  assert(Vue, "must call Vue.use(Vuex) before creating a store instance.")
+	  assert(typeof Promise !== 'undefined', "vuex requires a Promise polyfill in this browser.")
+
+	  var state = options.state; if ( state === void 0 ) state = {};
+	  var plugins = options.plugins; if ( plugins === void 0 ) plugins = [];
+	  var strict = options.strict; if ( strict === void 0 ) strict = false;
+
+	  // store internal state
+	  this._options = options
+	  this._committing = false
+	  this._actions = Object.create(null)
+	  this._mutations = Object.create(null)
+	  this._wrappedGetters = Object.create(null)
+	  this._runtimeModules = Object.create(null)
+	  this._subscribers = []
+	  this._watcherVM = new Vue()
+
+	    // bind commit and dispatch to self
+	  var store = this
+	  var ref = this;
+	  var dispatch = ref.dispatch;
+	  var commit = ref.commit;
+	  this.dispatch = function boundDispatch (type, payload) {
+	    return dispatch.call(store, type, payload)
+	    }
+	    this.commit = function boundCommit (type, payload, options) {
+	    return commit.call(store, type, payload, options)
+	  }
+
+	  // strict mode
+	  this.strict = strict
+
+	  // init root module.
+	  // this also recursively registers all sub-modules
+	  // and collects all module getters inside this._wrappedGetters
+	  installModule(this, state, [], options)
+
+	  // initialize the store vm, which is responsible for the reactivity
+	  // (also registers _wrappedGetters as computed properties)
+	  resetStoreVM(this, state)
+
+	  // apply plugins
+	  plugins.concat(devtoolPlugin).forEach(function (plugin) { return plugin(this$1); })
+	};
+
+	var prototypeAccessors = { state: {} };
+
+	prototypeAccessors.state.get = function () {
+	  return this._vm.state
+	};
+
+	prototypeAccessors.state.set = function (v) {
+	  assert(false, "Use store.replaceState() to explicit replace store state.")
+	};
+
+	Store.prototype.commit = function commit (type, payload, options) {
+	    var this$1 = this;
+
+	  // check object-style commit
+	  if (isObject(type) && type.type) {
+	    options = payload
+	    payload = type
+	    type = type.type
+	  }
+	  var mutation = { type: type, payload: payload }
+	  var entry = this._mutations[type]
+	  if (!entry) {
+	    console.error(("[vuex] unknown mutation type: " + type))
+	    return
+	  }
+	  this._withCommit(function () {
+	    entry.forEach(function commitIterator (handler) {
+	      handler(payload)
+	    })
+	  })
+	  if (!options || !options.silent) {
+	    this._subscribers.forEach(function (sub) { return sub(mutation, this$1.state); })
+	  }
+	};
+
+	Store.prototype.dispatch = function dispatch (type, payload) {
+	  // check object-style dispatch
+	  if (isObject(type) && type.type) {
+	    payload = type
+	    type = type.type
+	  }
+	  var entry = this._actions[type]
+	  if (!entry) {
+	    console.error(("[vuex] unknown action type: " + type))
+	    return
+	  }
+	  return entry.length > 1
+	    ? Promise.all(entry.map(function (handler) { return handler(payload); }))
+	    : entry[0](payload)
+	};
+
+	Store.prototype.subscribe = function subscribe (fn) {
+	  var subs = this._subscribers
+	  if (subs.indexOf(fn) < 0) {
+	    subs.push(fn)
+	  }
+	  return function () {
+	    var i = subs.indexOf(fn)
+	    if (i > -1) {
+	      subs.splice(i, 1)
+	    }
+	  }
+	};
+
+	Store.prototype.watch = function watch (getter, cb, options) {
+	    var this$1 = this;
+
+	  assert(typeof getter === 'function', "store.watch only accepts a function.")
+	  return this._watcherVM.$watch(function () { return getter(this$1.state); }, cb, options)
+	};
+
+	Store.prototype.replaceState = function replaceState (state) {
+	    var this$1 = this;
+
+	  this._withCommit(function () {
+	    this$1._vm.state = state
+	  })
+	};
+
+	Store.prototype.registerModule = function registerModule (path, module) {
+	  if (typeof path === 'string') { path = [path] }
+	  assert(Array.isArray(path), "module path must be a string or an Array.")
+	  this._runtimeModules[path.join('.')] = module
+	  installModule(this, this.state, path, module)
+	  // reset store to update getters...
+	  resetStoreVM(this, this.state)
+	};
+
+	Store.prototype.unregisterModule = function unregisterModule (path) {
+	    var this$1 = this;
+
+	  if (typeof path === 'string') { path = [path] }
+	  assert(Array.isArray(path), "module path must be a string or an Array.")
+	    delete this._runtimeModules[path.join('.')]
+	  this._withCommit(function () {
+	    var parentState = getNestedState(this$1.state, path.slice(0, -1))
+	    Vue.delete(parentState, path[path.length - 1])
+	  })
+	  resetStore(this)
+	};
+
+	Store.prototype.hotUpdate = function hotUpdate (newOptions) {
+	  updateModule(this._options, newOptions)
+	  resetStore(this)
+	};
+
+	Store.prototype._withCommit = function _withCommit (fn) {
+	  var committing = this._committing
+	  this._committing = true
+	  fn()
+	  this._committing = committing
+	};
+
+	Object.defineProperties( Store.prototype, prototypeAccessors );
+
+	function updateModule (targetModule, newModule) {
+	  if (newModule.actions) {
+	    targetModule.actions = newModule.actions
+	  }
+	  if (newModule.mutations) {
+	    targetModule.mutations = newModule.mutations
+	  }
+	  if (newModule.getters) {
+	    targetModule.getters = newModule.getters
+	  }
+	  if (newModule.modules) {
+	    for (var key in newModule.modules) {
+	      if (!(targetModule.modules && targetModule.modules[key])) {
+	        console.warn(
+	          "[vuex] trying to add a new module '" + key + "' on hot reloading, " +
+	          'manual reload is needed'
+	        )
+	        return
+	      }
+	      updateModule(targetModule.modules[key], newModule.modules[key])
+	    }
+	  }
+	}
+
+	function resetStore (store) {
+	  store._actions = Object.create(null)
+	  store._mutations = Object.create(null)
+	  store._wrappedGetters = Object.create(null)
+	  var state = store.state
+	  // init root module
+	  installModule(store, state, [], store._options, true)
+	  // init all runtime modules
+	  Object.keys(store._runtimeModules).forEach(function (key) {
+	    installModule(store, state, key.split('.'), store._runtimeModules[key], true)
+	  })
+	  // reset vm
+	  resetStoreVM(store, state)
+	}
+
+	function resetStoreVM (store, state) {
+	  var oldVm = store._vm
+
+	  // bind store public getters
+	  store.getters = {}
+	  var wrappedGetters = store._wrappedGetters
+	  var computed = {}
+	  Object.keys(wrappedGetters).forEach(function (key) {
+	    var fn = wrappedGetters[key]
+	    // use computed to leverage its lazy-caching mechanism
+	    computed[key] = function () { return fn(store); }
+	    Object.defineProperty(store.getters, key, {
+	      get: function () { return store._vm[key]; }
+	    })
+	  })
+
+	  // use a Vue instance to store the state tree
+	  // suppress warnings just in case the user has added
+	  // some funky global mixins
+	  var silent = Vue.config.silent
+	  Vue.config.silent = true
+	  store._vm = new Vue({
+	    data: { state: state },
+	    computed: computed
+	  })
+	  Vue.config.silent = silent
+
+	  // enable strict mode for new vm
+	  if (store.strict) {
+	    enableStrictMode(store)
+	  }
+
+	  if (oldVm) {
+	    // dispatch changes in all subscribed watchers
+	    // to force getter re-evaluation.
+	    store._withCommit(function () {
+	      oldVm.state = null
+	    })
+	    Vue.nextTick(function () { return oldVm.$destroy(); })
+	  }
+	}
+
+	function installModule (store, rootState, path, module, hot) {
+	  var isRoot = !path.length
+	  var state = module.state;
+	  var actions = module.actions;
+	  var mutations = module.mutations;
+	  var getters = module.getters;
+	  var modules = module.modules;
+
+	  // set state
+	  if (!isRoot && !hot) {
+	    var parentState = getNestedState(rootState, path.slice(0, -1))
+	    var moduleName = path[path.length - 1]
+	    store._withCommit(function () {
+	      Vue.set(parentState, moduleName, state || {})
+	    })
+	  }
+
+	  if (mutations) {
+	    Object.keys(mutations).forEach(function (key) {
+	      registerMutation(store, key, mutations[key], path)
+	    })
+	  }
+
+	  if (actions) {
+	    Object.keys(actions).forEach(function (key) {
+	      registerAction(store, key, actions[key], path)
+	    })
+	  }
+
+	  if (getters) {
+	    wrapGetters(store, getters, path)
+	  }
+
+	  if (modules) {
+	    Object.keys(modules).forEach(function (key) {
+	      installModule(store, rootState, path.concat(key), modules[key], hot)
+	    })
+	  }
+	}
+
+	function registerMutation (store, type, handler, path) {
+	  if ( path === void 0 ) path = [];
+
+	  var entry = store._mutations[type] || (store._mutations[type] = [])
+	  entry.push(function wrappedMutationHandler (payload) {
+	    handler(getNestedState(store.state, path), payload)
+	  })
+	}
+
+	function registerAction (store, type, handler, path) {
+	  if ( path === void 0 ) path = [];
+
+	  var entry = store._actions[type] || (store._actions[type] = [])
+	  var dispatch = store.dispatch;
+	  var commit = store.commit;
+	  entry.push(function wrappedActionHandler (payload, cb) {
+	    var res = handler({
+	      dispatch: dispatch,
+	      commit: commit,
+	      getters: store.getters,
+	      state: getNestedState(store.state, path),
+	      rootState: store.state
+	    }, payload, cb)
+	    if (!isPromise(res)) {
+	      res = Promise.resolve(res)
+	    }
+	    if (store._devtoolHook) {
+	      return res.catch(function (err) {
+	        store._devtoolHook.emit('vuex:error', err)
+	        throw err
+	      })
+	    } else {
+	      return res
+	    }
+	  })
+	}
+
+	function wrapGetters (store, moduleGetters, modulePath) {
+	  Object.keys(moduleGetters).forEach(function (getterKey) {
+	    var rawGetter = moduleGetters[getterKey]
+	    if (store._wrappedGetters[getterKey]) {
+	      console.error(("[vuex] duplicate getter key: " + getterKey))
+	      return
+	    }
+	    store._wrappedGetters[getterKey] = function wrappedGetter (store) {
+	      return rawGetter(
+	        getNestedState(store.state, modulePath), // local state
+	        store.getters, // getters
+	        store.state // root state
+	      )
+	    }
+	  })
+	}
+
+	function enableStrictMode (store) {
+	  store._vm.$watch('state', function () {
+	    assert(store._committing, "Do not mutate vuex store state outside mutation handlers.")
+	  }, { deep: true, sync: true })
+	}
+
+	function getNestedState (state, path) {
+	  return path.length
+	    ? path.reduce(function (state, key) { return state[key]; }, state)
+	    : state
+	}
+
+	function install (_Vue) {
+	  if (Vue) {
+	    console.error(
+	      '[vuex] already installed. Vue.use(Vuex) should be called only once.'
+	    )
+	    return
+	  }
+	  Vue = _Vue
+	  applyMixin(Vue)
+	}
+
+	// auto install in dist mode
+	if (typeof window !== 'undefined' && window.Vue) {
+	  install(window.Vue)
+	}
+
+	var index = {
+	  Store: Store,
+	  install: install,
+	  mapState: mapState,
+	  mapMutations: mapMutations,
+	  mapGetters: mapGetters,
+	  mapActions: mapActions
+	}
+
+	return index;
+
+	})));
+
+/***/ },
+/* 39 */
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+
+	Object.defineProperty(exports, "__esModule", {
+		value: true
+	});
+
+	var _vue = __webpack_require__(36);
+
+	var _vue2 = _interopRequireDefault(_vue);
+
+	var _vuex = __webpack_require__(38);
+
+	var _vuex2 = _interopRequireDefault(_vuex);
+
+	var _dataApi = __webpack_require__(40);
+
+	var _dataApi2 = _interopRequireDefault(_dataApi);
+
+	var _state = __webpack_require__(64);
+
+	var _state2 = _interopRequireDefault(_state);
+
+	var _actions = __webpack_require__(65);
+
+	var _actions2 = _interopRequireDefault(_actions);
+
+	var _mutations = __webpack_require__(66);
+
+	var _mutations2 = _interopRequireDefault(_mutations);
+
+	var _reStore = __webpack_require__(67);
+
+	var _reStore2 = _interopRequireDefault(_reStore);
+
+	var _playerStore = __webpack_require__(68);
+
+	var _playerStore2 = _interopRequireDefault(_playerStore);
+
+	var _headerStore = __webpack_require__(69);
+
+	var _headerStore2 = _interopRequireDefault(_headerStore);
+
+	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+	_vue2.default.use(_vuex2.default);
+
+	exports.default = new _vuex2.default.Store({
+		state: _state2.default,
+		actions: _actions2.default,
+		mutations: _mutations2.default,
+		modules: {
+			reStore: _reStore2.default,
+			playerStore: _playerStore2.default,
+			headerStore: _headerStore2.default
+		}
+	});
+
+/***/ },
+/* 40 */
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+
+	Object.defineProperty(exports, "__esModule", {
+		value: true
+	});
+
+	var _getIterator2 = __webpack_require__(41);
+
+	var _getIterator3 = _interopRequireDefault(_getIterator2);
+
+	var _vue = __webpack_require__(36);
+
+	var _vue2 = _interopRequireDefault(_vue);
+
+	var _vueResource = __webpack_require__(63);
+
+	var _vueResource2 = _interopRequireDefault(_vueResource);
+
+	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+	_vue2.default.use(_vueResource2.default);
+
+	exports.default = {
+		_api: function _api() {
+			for (var _len = arguments.length, urls = Array(_len), _key = 0; _key < _len; _key++) {
+				urls[_key] = arguments[_key];
+			}
+
+			/**
+	   * 公用接口请求函数
+	   */
+			var then_num = urls.length,
+			    httpGetList = [],
+			    bodyArray = [],
+			    errorArray = [];
+
+			var _iteratorNormalCompletion = true;
+			var _didIteratorError = false;
+			var _iteratorError = undefined;
+
+			try {
+				for (var _iterator = (0, _getIterator3.default)(urls), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+					var url = _step.value;
+
+					httpGetList.push(_vue2.default.http.get('http://localhost:9900/' + url));
+				}
+			} catch (err) {
+				_didIteratorError = true;
+				_iteratorError = err;
+			} finally {
+				try {
+					if (!_iteratorNormalCompletion && _iterator.return) {
+						_iterator.return();
+					}
+				} finally {
+					if (_didIteratorError) {
+						throw _iteratorError;
+					}
+				}
+			}
+
+			return {
+				then: function then(successCallback, errorCallback) {
+					var _iteratorNormalCompletion2 = true;
+					var _didIteratorError2 = false;
+					var _iteratorError2 = undefined;
+
+					try {
+						var _loop = function _loop() {
+							var i = _step2.value;
+
+							httpGetList[i].then(function (_ref) {
+								var body = _ref.body;
+
+								bodyArray[i] = body;
+								then_num -= 1;
+								if (then_num == 0) {
+									successCallback && successCallback.apply(undefined, bodyArray);
+								}
+							}, function (error) {
+								errorArray.push(error);
+							});
+						};
+
+						for (var _iterator2 = (0, _getIterator3.default)(httpGetList.keys()), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
+							_loop();
+						}
+					} catch (err) {
+						_didIteratorError2 = true;
+						_iteratorError2 = err;
+					} finally {
+						try {
+							if (!_iteratorNormalCompletion2 && _iterator2.return) {
+								_iterator2.return();
+							}
+						} finally {
+							if (_didIteratorError2) {
+								throw _iteratorError2;
+							}
+						}
+					}
+
+					errorCallback && errorCallback.apply(undefined, errorArray);
+				}
+			};
+		}
+	};
+
+/***/ },
+/* 41 */
+/***/ function(module, exports, __webpack_require__) {
+
+	module.exports = { "default": __webpack_require__(42), __esModule: true };
+
+/***/ },
+/* 42 */
+/***/ function(module, exports, __webpack_require__) {
+
+	__webpack_require__(43);
+	__webpack_require__(58);
+	module.exports = __webpack_require__(60);
+
+/***/ },
+/* 43 */
+/***/ function(module, exports, __webpack_require__) {
+
+	__webpack_require__(44);
+	var global        = __webpack_require__(18)
+	  , hide          = __webpack_require__(26)
+	  , Iterators     = __webpack_require__(47)
+	  , TO_STRING_TAG = __webpack_require__(56)('toStringTag');
+
+	for(var collections = ['NodeList', 'DOMTokenList', 'MediaList', 'StyleSheetList', 'CSSRuleList'], i = 0; i < 5; i++){
+	  var NAME       = collections[i]
+	    , Collection = global[NAME]
+	    , proto      = Collection && Collection.prototype;
+	  if(proto && !proto[TO_STRING_TAG])hide(proto, TO_STRING_TAG, NAME);
+	  Iterators[NAME] = Iterators.Array;
+	}
+
+/***/ },
+/* 44 */
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+	var addToUnscopables = __webpack_require__(45)
+	  , step             = __webpack_require__(46)
+	  , Iterators        = __webpack_require__(47)
+	  , toIObject        = __webpack_require__(9);
+
+	// 22.1.3.4 Array.prototype.entries()
+	// 22.1.3.13 Array.prototype.keys()
+	// 22.1.3.29 Array.prototype.values()
+	// 22.1.3.30 Array.prototype[@@iterator]()
+	module.exports = __webpack_require__(48)(Array, 'Array', function(iterated, kind){
+	  this._t = toIObject(iterated); // target
+	  this._i = 0;                   // next index
+	  this._k = kind;                // kind
+	// 22.1.5.2.1 %ArrayIteratorPrototype%.next()
+	}, function(){
+	  var O     = this._t
+	    , kind  = this._k
+	    , index = this._i++;
+	  if(!O || index >= O.length){
+	    this._t = undefined;
+	    return step(1);
+	  }
+	  if(kind == 'keys'  )return step(0, index);
+	  if(kind == 'values')return step(0, O[index]);
+	  return step(0, [index, O[index]]);
+	}, 'values');
+
+	// argumentsList[@@iterator] is %ArrayProto_values% (9.4.4.6, 9.4.4.7)
+	Iterators.Arguments = Iterators.Array;
+
+	addToUnscopables('keys');
+	addToUnscopables('values');
+	addToUnscopables('entries');
+
+/***/ },
+/* 45 */
+/***/ function(module, exports) {
+
+	module.exports = function(){ /* empty */ };
+
+/***/ },
+/* 46 */
+/***/ function(module, exports) {
+
+	module.exports = function(done, value){
+	  return {value: value, done: !!done};
+	};
+
+/***/ },
+/* 47 */
+/***/ function(module, exports) {
+
+	module.exports = {};
+
+/***/ },
+/* 48 */
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+	var LIBRARY        = __webpack_require__(49)
+	  , $export        = __webpack_require__(22)
+	  , redefine       = __webpack_require__(50)
+	  , hide           = __webpack_require__(26)
+	  , has            = __webpack_require__(8)
+	  , Iterators      = __webpack_require__(47)
+	  , $iterCreate    = __webpack_require__(51)
+	  , setToStringTag = __webpack_require__(55)
+	  , getPrototypeOf = __webpack_require__(57)
+	  , ITERATOR       = __webpack_require__(56)('iterator')
+	  , BUGGY          = !([].keys && 'next' in [].keys()) // Safari has buggy iterators w/o `next`
+	  , FF_ITERATOR    = '@@iterator'
+	  , KEYS           = 'keys'
+	  , VALUES         = 'values';
+
+	var returnThis = function(){ return this; };
+
+	module.exports = function(Base, NAME, Constructor, next, DEFAULT, IS_SET, FORCED){
+	  $iterCreate(Constructor, NAME, next);
+	  var getMethod = function(kind){
+	    if(!BUGGY && kind in proto)return proto[kind];
+	    switch(kind){
+	      case KEYS: return function keys(){ return new Constructor(this, kind); };
+	      case VALUES: return function values(){ return new Constructor(this, kind); };
+	    } return function entries(){ return new Constructor(this, kind); };
+	  };
+	  var TAG        = NAME + ' Iterator'
+	    , DEF_VALUES = DEFAULT == VALUES
+	    , VALUES_BUG = false
+	    , proto      = Base.prototype
+	    , $native    = proto[ITERATOR] || proto[FF_ITERATOR] || DEFAULT && proto[DEFAULT]
+	    , $default   = $native || getMethod(DEFAULT)
+	    , $entries   = DEFAULT ? !DEF_VALUES ? $default : getMethod('entries') : undefined
+	    , $anyNative = NAME == 'Array' ? proto.entries || $native : $native
+	    , methods, key, IteratorPrototype;
+	  // Fix native
+	  if($anyNative){
+	    IteratorPrototype = getPrototypeOf($anyNative.call(new Base));
+	    if(IteratorPrototype !== Object.prototype){
+	      // Set @@toStringTag to native iterators
+	      setToStringTag(IteratorPrototype, TAG, true);
+	      // fix for some old engines
+	      if(!LIBRARY && !has(IteratorPrototype, ITERATOR))hide(IteratorPrototype, ITERATOR, returnThis);
+	    }
+	  }
+	  // fix Array#{values, @@iterator}.name in V8 / FF
+	  if(DEF_VALUES && $native && $native.name !== VALUES){
+	    VALUES_BUG = true;
+	    $default = function values(){ return $native.call(this); };
+	  }
+	  // Define iterator
+	  if((!LIBRARY || FORCED) && (BUGGY || VALUES_BUG || !proto[ITERATOR])){
+	    hide(proto, ITERATOR, $default);
+	  }
+	  // Plug for library
+	  Iterators[NAME] = $default;
+	  Iterators[TAG]  = returnThis;
+	  if(DEFAULT){
+	    methods = {
+	      values:  DEF_VALUES ? $default : getMethod(VALUES),
+	      keys:    IS_SET     ? $default : getMethod(KEYS),
+	      entries: $entries
+	    };
+	    if(FORCED)for(key in methods){
+	      if(!(key in proto))redefine(proto, key, methods[key]);
+	    } else $export($export.P + $export.F * (BUGGY || VALUES_BUG), NAME, methods);
+	  }
+	  return methods;
+	};
+
+/***/ },
+/* 49 */
+/***/ function(module, exports) {
+
+	module.exports = true;
+
+/***/ },
+/* 50 */
+/***/ function(module, exports, __webpack_require__) {
+
+	module.exports = __webpack_require__(26);
+
+/***/ },
+/* 51 */
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+	var create         = __webpack_require__(52)
+	  , descriptor     = __webpack_require__(35)
+	  , setToStringTag = __webpack_require__(55)
+	  , IteratorPrototype = {};
+
+	// 25.1.2.1.1 %IteratorPrototype%[@@iterator]()
+	__webpack_require__(26)(IteratorPrototype, __webpack_require__(56)('iterator'), function(){ return this; });
+
+	module.exports = function(Constructor, NAME, next){
+	  Constructor.prototype = create(IteratorPrototype, {next: descriptor(1, next)});
+	  setToStringTag(Constructor, NAME + ' Iterator');
+	};
+
+/***/ },
+/* 52 */
+/***/ function(module, exports, __webpack_require__) {
+
+	// 19.1.2.2 / 15.2.3.5 Object.create(O [, Properties])
+	var anObject    = __webpack_require__(28)
+	  , dPs         = __webpack_require__(53)
+	  , enumBugKeys = __webpack_require__(20)
+	  , IE_PROTO    = __webpack_require__(16)('IE_PROTO')
+	  , Empty       = function(){ /* empty */ }
+	  , PROTOTYPE   = 'prototype';
+
+	// Create object with fake `null` prototype: use iframe Object with cleared prototype
+	var createDict = function(){
+	  // Thrash, waste and sodomy: IE GC bug
+	  var iframe = __webpack_require__(33)('iframe')
+	    , i      = enumBugKeys.length
+	    , lt     = '<'
+	    , gt     = '>'
+	    , iframeDocument;
+	  iframe.style.display = 'none';
+	  __webpack_require__(54).appendChild(iframe);
+	  iframe.src = 'javascript:'; // eslint-disable-line no-script-url
+	  // createDict = iframe.contentWindow.Object;
+	  // html.removeChild(iframe);
+	  iframeDocument = iframe.contentWindow.document;
+	  iframeDocument.open();
+	  iframeDocument.write(lt + 'script' + gt + 'document.F=Object' + lt + '/script' + gt);
+	  iframeDocument.close();
+	  createDict = iframeDocument.F;
+	  while(i--)delete createDict[PROTOTYPE][enumBugKeys[i]];
+	  return createDict();
+	};
+
+	module.exports = Object.create || function create(O, Properties){
+	  var result;
+	  if(O !== null){
+	    Empty[PROTOTYPE] = anObject(O);
+	    result = new Empty;
+	    Empty[PROTOTYPE] = null;
+	    // add "__proto__" for Object.getPrototypeOf polyfill
+	    result[IE_PROTO] = O;
+	  } else result = createDict();
+	  return Properties === undefined ? result : dPs(result, Properties);
+	};
+
+
+/***/ },
+/* 53 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var dP       = __webpack_require__(27)
+	  , anObject = __webpack_require__(28)
+	  , getKeys  = __webpack_require__(6);
+
+	module.exports = __webpack_require__(31) ? Object.defineProperties : function defineProperties(O, Properties){
+	  anObject(O);
+	  var keys   = getKeys(Properties)
+	    , length = keys.length
+	    , i = 0
+	    , P;
+	  while(length > i)dP.f(O, P = keys[i++], Properties[P]);
+	  return O;
+	};
+
+/***/ },
+/* 54 */
+/***/ function(module, exports, __webpack_require__) {
+
+	module.exports = __webpack_require__(18).document && document.documentElement;
+
+/***/ },
+/* 55 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var def = __webpack_require__(27).f
+	  , has = __webpack_require__(8)
+	  , TAG = __webpack_require__(56)('toStringTag');
+
+	module.exports = function(it, tag, stat){
+	  if(it && !has(it = stat ? it : it.prototype, TAG))def(it, TAG, {configurable: true, value: tag});
+	};
+
+/***/ },
+/* 56 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var store      = __webpack_require__(17)('wks')
+	  , uid        = __webpack_require__(19)
+	  , Symbol     = __webpack_require__(18).Symbol
+	  , USE_SYMBOL = typeof Symbol == 'function';
+
+	var $exports = module.exports = function(name){
+	  return store[name] || (store[name] =
+	    USE_SYMBOL && Symbol[name] || (USE_SYMBOL ? Symbol : uid)('Symbol.' + name));
+	};
+
+	$exports.store = store;
+
+/***/ },
+/* 57 */
+/***/ function(module, exports, __webpack_require__) {
+
+	// 19.1.2.9 / 15.2.3.2 Object.getPrototypeOf(O)
+	var has         = __webpack_require__(8)
+	  , toObject    = __webpack_require__(4)
+	  , IE_PROTO    = __webpack_require__(16)('IE_PROTO')
+	  , ObjectProto = Object.prototype;
+
+	module.exports = Object.getPrototypeOf || function(O){
+	  O = toObject(O);
+	  if(has(O, IE_PROTO))return O[IE_PROTO];
+	  if(typeof O.constructor == 'function' && O instanceof O.constructor){
+	    return O.constructor.prototype;
+	  } return O instanceof Object ? ObjectProto : null;
+	};
+
+/***/ },
+/* 58 */
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+	var $at  = __webpack_require__(59)(true);
+
+	// 21.1.3.27 String.prototype[@@iterator]()
+	__webpack_require__(48)(String, 'String', function(iterated){
+	  this._t = String(iterated); // target
+	  this._i = 0;                // next index
+	// 21.1.5.2.1 %StringIteratorPrototype%.next()
+	}, function(){
+	  var O     = this._t
+	    , index = this._i
+	    , point;
+	  if(index >= O.length)return {value: undefined, done: true};
+	  point = $at(O, index);
+	  this._i += point.length;
+	  return {value: point, done: false};
+	});
+
+/***/ },
+/* 59 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var toInteger = __webpack_require__(14)
+	  , defined   = __webpack_require__(5);
+	// true  -> String#at
+	// false -> String#codePointAt
+	module.exports = function(TO_STRING){
+	  return function(that, pos){
+	    var s = String(defined(that))
+	      , i = toInteger(pos)
+	      , l = s.length
+	      , a, b;
+	    if(i < 0 || i >= l)return TO_STRING ? '' : undefined;
+	    a = s.charCodeAt(i);
+	    return a < 0xd800 || a > 0xdbff || i + 1 === l || (b = s.charCodeAt(i + 1)) < 0xdc00 || b > 0xdfff
+	      ? TO_STRING ? s.charAt(i) : a
+	      : TO_STRING ? s.slice(i, i + 2) : (a - 0xd800 << 10) + (b - 0xdc00) + 0x10000;
+	  };
+	};
+
+/***/ },
+/* 60 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var anObject = __webpack_require__(28)
+	  , get      = __webpack_require__(61);
+	module.exports = __webpack_require__(23).getIterator = function(it){
+	  var iterFn = get(it);
+	  if(typeof iterFn != 'function')throw TypeError(it + ' is not iterable!');
+	  return anObject(iterFn.call(it));
+	};
+
+/***/ },
+/* 61 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var classof   = __webpack_require__(62)
+	  , ITERATOR  = __webpack_require__(56)('iterator')
+	  , Iterators = __webpack_require__(47);
+	module.exports = __webpack_require__(23).getIteratorMethod = function(it){
+	  if(it != undefined)return it[ITERATOR]
+	    || it['@@iterator']
+	    || Iterators[classof(it)];
+	};
+
+/***/ },
+/* 62 */
+/***/ function(module, exports, __webpack_require__) {
+
+	// getting tag from 19.1.3.6 Object.prototype.toString()
+	var cof = __webpack_require__(11)
+	  , TAG = __webpack_require__(56)('toStringTag')
+	  // ES3 wrong here
+	  , ARG = cof(function(){ return arguments; }()) == 'Arguments';
+
+	// fallback for IE11 Script Access Denied error
+	var tryGet = function(it, key){
+	  try {
+	    return it[key];
+	  } catch(e){ /* empty */ }
+	};
+
+	module.exports = function(it){
+	  var O, T, B;
+	  return it === undefined ? 'Undefined' : it === null ? 'Null'
+	    // @@toStringTag case
+	    : typeof (T = tryGet(O = Object(it), TAG)) == 'string' ? T
+	    // builtinTag case
+	    : ARG ? cof(O)
+	    // ES3 arguments fallback
+	    : (B = cof(O)) == 'Object' && typeof O.callee == 'function' ? 'Arguments' : B;
+	};
+
+/***/ },
+/* 63 */
+/***/ function(module, exports) {
+
+	/*!
+	 * vue-resource v1.0.3
+	 * https://github.com/vuejs/vue-resource
+	 * Released under the MIT License.
+	 */
+
+	'use strict';
+
+	/**
+	 * Promises/A+ polyfill v1.1.4 (https://github.com/bramstein/promis)
+	 */
+
+	var RESOLVED = 0;
+	var REJECTED = 1;
+	var PENDING = 2;
+
+	function Promise$1(executor) {
+
+	    this.state = PENDING;
+	    this.value = undefined;
+	    this.deferred = [];
+
+	    var promise = this;
+
+	    try {
+	        executor(function (x) {
+	            promise.resolve(x);
+	        }, function (r) {
+	            promise.reject(r);
+	        });
+	    } catch (e) {
+	        promise.reject(e);
+	    }
+	}
+
+	Promise$1.reject = function (r) {
+	    return new Promise$1(function (resolve, reject) {
+	        reject(r);
+	    });
+	};
+
+	Promise$1.resolve = function (x) {
+	    return new Promise$1(function (resolve, reject) {
+	        resolve(x);
+	    });
+	};
+
+	Promise$1.all = function all(iterable) {
+	    return new Promise$1(function (resolve, reject) {
+	        var count = 0,
+	            result = [];
+
+	        if (iterable.length === 0) {
+	            resolve(result);
+	        }
+
+	        function resolver(i) {
+	            return function (x) {
+	                result[i] = x;
+	                count += 1;
+
+	                if (count === iterable.length) {
+	                    resolve(result);
+	                }
+	            };
+	        }
+
+	        for (var i = 0; i < iterable.length; i += 1) {
+	            Promise$1.resolve(iterable[i]).then(resolver(i), reject);
+	        }
+	    });
+	};
+
+	Promise$1.race = function race(iterable) {
+	    return new Promise$1(function (resolve, reject) {
+	        for (var i = 0; i < iterable.length; i += 1) {
+	            Promise$1.resolve(iterable[i]).then(resolve, reject);
+	        }
+	    });
+	};
+
+	var p$1 = Promise$1.prototype;
+
+	p$1.resolve = function resolve(x) {
+	    var promise = this;
+
+	    if (promise.state === PENDING) {
+	        if (x === promise) {
+	            throw new TypeError('Promise settled with itself.');
+	        }
+
+	        var called = false;
+
+	        try {
+	            var then = x && x['then'];
+
+	            if (x !== null && typeof x === 'object' && typeof then === 'function') {
+	                then.call(x, function (x) {
+	                    if (!called) {
+	                        promise.resolve(x);
+	                    }
+	                    called = true;
+	                }, function (r) {
+	                    if (!called) {
+	                        promise.reject(r);
+	                    }
+	                    called = true;
+	                });
+	                return;
+	            }
+	        } catch (e) {
+	            if (!called) {
+	                promise.reject(e);
+	            }
+	            return;
+	        }
+
+	        promise.state = RESOLVED;
+	        promise.value = x;
+	        promise.notify();
+	    }
+	};
+
+	p$1.reject = function reject(reason) {
+	    var promise = this;
+
+	    if (promise.state === PENDING) {
+	        if (reason === promise) {
+	            throw new TypeError('Promise settled with itself.');
+	        }
+
+	        promise.state = REJECTED;
+	        promise.value = reason;
+	        promise.notify();
+	    }
+	};
+
+	p$1.notify = function notify() {
+	    var promise = this;
+
+	    nextTick(function () {
+	        if (promise.state !== PENDING) {
+	            while (promise.deferred.length) {
+	                var deferred = promise.deferred.shift(),
+	                    onResolved = deferred[0],
+	                    onRejected = deferred[1],
+	                    resolve = deferred[2],
+	                    reject = deferred[3];
+
+	                try {
+	                    if (promise.state === RESOLVED) {
+	                        if (typeof onResolved === 'function') {
+	                            resolve(onResolved.call(undefined, promise.value));
+	                        } else {
+	                            resolve(promise.value);
+	                        }
+	                    } else if (promise.state === REJECTED) {
+	                        if (typeof onRejected === 'function') {
+	                            resolve(onRejected.call(undefined, promise.value));
+	                        } else {
+	                            reject(promise.value);
+	                        }
+	                    }
+	                } catch (e) {
+	                    reject(e);
+	                }
+	            }
+	        }
+	    });
+	};
+
+	p$1.then = function then(onResolved, onRejected) {
+	    var promise = this;
+
+	    return new Promise$1(function (resolve, reject) {
+	        promise.deferred.push([onResolved, onRejected, resolve, reject]);
+	        promise.notify();
+	    });
+	};
+
+	p$1.catch = function (onRejected) {
+	    return this.then(undefined, onRejected);
+	};
+
+	/**
+	 * Promise adapter.
+	 */
+
+	if (typeof Promise === 'undefined') {
+	    window.Promise = Promise$1;
+	}
+
+	function PromiseObj(executor, context) {
+
+	    if (executor instanceof Promise) {
+	        this.promise = executor;
+	    } else {
+	        this.promise = new Promise(executor.bind(context));
+	    }
+
+	    this.context = context;
+	}
+
+	PromiseObj.all = function (iterable, context) {
+	    return new PromiseObj(Promise.all(iterable), context);
+	};
+
+	PromiseObj.resolve = function (value, context) {
+	    return new PromiseObj(Promise.resolve(value), context);
+	};
+
+	PromiseObj.reject = function (reason, context) {
+	    return new PromiseObj(Promise.reject(reason), context);
+	};
+
+	PromiseObj.race = function (iterable, context) {
+	    return new PromiseObj(Promise.race(iterable), context);
+	};
+
+	var p = PromiseObj.prototype;
+
+	p.bind = function (context) {
+	    this.context = context;
+	    return this;
+	};
+
+	p.then = function (fulfilled, rejected) {
+
+	    if (fulfilled && fulfilled.bind && this.context) {
+	        fulfilled = fulfilled.bind(this.context);
+	    }
+
+	    if (rejected && rejected.bind && this.context) {
+	        rejected = rejected.bind(this.context);
+	    }
+
+	    return new PromiseObj(this.promise.then(fulfilled, rejected), this.context);
+	};
+
+	p.catch = function (rejected) {
+
+	    if (rejected && rejected.bind && this.context) {
+	        rejected = rejected.bind(this.context);
+	    }
+
+	    return new PromiseObj(this.promise.catch(rejected), this.context);
+	};
+
+	p.finally = function (callback) {
+
+	    return this.then(function (value) {
+	        callback.call(this);
+	        return value;
+	    }, function (reason) {
+	        callback.call(this);
+	        return Promise.reject(reason);
+	    });
+	};
+
+	/**
+	 * Utility functions.
+	 */
+
+	var debug = false;var util = {};var slice = [].slice;
+
+
+	function Util (Vue) {
+	    util = Vue.util;
+	    debug = Vue.config.debug || !Vue.config.silent;
+	}
+
+	function warn(msg) {
+	    if (typeof console !== 'undefined' && debug) {
+	        console.warn('[VueResource warn]: ' + msg);
+	    }
+	}
+
+	function error(msg) {
+	    if (typeof console !== 'undefined') {
+	        console.error(msg);
+	    }
+	}
+
+	function nextTick(cb, ctx) {
+	    return util.nextTick(cb, ctx);
+	}
+
+	function trim(str) {
+	    return str.replace(/^\s*|\s*$/g, '');
+	}
+
+	function toLower(str) {
+	    return str ? str.toLowerCase() : '';
+	}
+
+	function toUpper(str) {
+	    return str ? str.toUpperCase() : '';
+	}
+
+	var isArray = Array.isArray;
+
+	function isString(val) {
+	    return typeof val === 'string';
+	}
+
+	function isBoolean(val) {
+	    return val === true || val === false;
+	}
+
+	function isFunction(val) {
+	    return typeof val === 'function';
+	}
+
+	function isObject(obj) {
+	    return obj !== null && typeof obj === 'object';
+	}
+
+	function isPlainObject(obj) {
+	    return isObject(obj) && Object.getPrototypeOf(obj) == Object.prototype;
+	}
+
+	function isBlob(obj) {
+	    return typeof Blob !== 'undefined' && obj instanceof Blob;
+	}
+
+	function isFormData(obj) {
+	    return typeof FormData !== 'undefined' && obj instanceof FormData;
+	}
+
+	function when(value, fulfilled, rejected) {
+
+	    var promise = PromiseObj.resolve(value);
+
+	    if (arguments.length < 2) {
+	        return promise;
+	    }
+
+	    return promise.then(fulfilled, rejected);
+	}
+
+	function options(fn, obj, opts) {
+
+	    opts = opts || {};
+
+	    if (isFunction(opts)) {
+	        opts = opts.call(obj);
+	    }
+
+	    return merge(fn.bind({ $vm: obj, $options: opts }), fn, { $options: opts });
+	}
+
+	function each(obj, iterator) {
+
+	    var i, key;
+
+	    if (obj && typeof obj.length == 'number') {
+	        for (i = 0; i < obj.length; i++) {
+	            iterator.call(obj[i], obj[i], i);
+	        }
+	    } else if (isObject(obj)) {
+	        for (key in obj) {
+	            if (obj.hasOwnProperty(key)) {
+	                iterator.call(obj[key], obj[key], key);
+	            }
+	        }
+	    }
+
+	    return obj;
+	}
+
+	var assign = Object.assign || _assign;
+
+	function merge(target) {
+
+	    var args = slice.call(arguments, 1);
+
+	    args.forEach(function (source) {
+	        _merge(target, source, true);
+	    });
+
+	    return target;
+	}
+
+	function defaults(target) {
+
+	    var args = slice.call(arguments, 1);
+
+	    args.forEach(function (source) {
+
+	        for (var key in source) {
+	            if (target[key] === undefined) {
+	                target[key] = source[key];
+	            }
+	        }
+	    });
+
+	    return target;
+	}
+
+	function _assign(target) {
+
+	    var args = slice.call(arguments, 1);
+
+	    args.forEach(function (source) {
+	        _merge(target, source);
+	    });
+
+	    return target;
+	}
+
+	function _merge(target, source, deep) {
+	    for (var key in source) {
+	        if (deep && (isPlainObject(source[key]) || isArray(source[key]))) {
+	            if (isPlainObject(source[key]) && !isPlainObject(target[key])) {
+	                target[key] = {};
+	            }
+	            if (isArray(source[key]) && !isArray(target[key])) {
+	                target[key] = [];
+	            }
+	            _merge(target[key], source[key], deep);
+	        } else if (source[key] !== undefined) {
+	            target[key] = source[key];
+	        }
+	    }
+	}
+
+	/**
+	 * Root Prefix Transform.
+	 */
+
+	function root (options, next) {
+
+	    var url = next(options);
+
+	    if (isString(options.root) && !url.match(/^(https?:)?\//)) {
+	        url = options.root + '/' + url;
+	    }
+
+	    return url;
+	}
+
+	/**
+	 * Query Parameter Transform.
+	 */
+
+	function query (options, next) {
+
+	    var urlParams = Object.keys(Url.options.params),
+	        query = {},
+	        url = next(options);
+
+	    each(options.params, function (value, key) {
+	        if (urlParams.indexOf(key) === -1) {
+	            query[key] = value;
+	        }
+	    });
+
+	    query = Url.params(query);
+
+	    if (query) {
+	        url += (url.indexOf('?') == -1 ? '?' : '&') + query;
+	    }
+
+	    return url;
+	}
+
+	/**
+	 * URL Template v2.0.6 (https://github.com/bramstein/url-template)
+	 */
+
+	function expand(url, params, variables) {
+
+	    var tmpl = parse(url),
+	        expanded = tmpl.expand(params);
+
+	    if (variables) {
+	        variables.push.apply(variables, tmpl.vars);
+	    }
+
+	    return expanded;
+	}
+
+	function parse(template) {
+
+	    var operators = ['+', '#', '.', '/', ';', '?', '&'],
+	        variables = [];
+
+	    return {
+	        vars: variables,
+	        expand: function (context) {
+	            return template.replace(/\{([^\{\}]+)\}|([^\{\}]+)/g, function (_, expression, literal) {
+	                if (expression) {
+
+	                    var operator = null,
+	                        values = [];
+
+	                    if (operators.indexOf(expression.charAt(0)) !== -1) {
+	                        operator = expression.charAt(0);
+	                        expression = expression.substr(1);
+	                    }
+
+	                    expression.split(/,/g).forEach(function (variable) {
+	                        var tmp = /([^:\*]*)(?::(\d+)|(\*))?/.exec(variable);
+	                        values.push.apply(values, getValues(context, operator, tmp[1], tmp[2] || tmp[3]));
+	                        variables.push(tmp[1]);
+	                    });
+
+	                    if (operator && operator !== '+') {
+
+	                        var separator = ',';
+
+	                        if (operator === '?') {
+	                            separator = '&';
+	                        } else if (operator !== '#') {
+	                            separator = operator;
+	                        }
+
+	                        return (values.length !== 0 ? operator : '') + values.join(separator);
+	                    } else {
+	                        return values.join(',');
+	                    }
+	                } else {
+	                    return encodeReserved(literal);
+	                }
+	            });
+	        }
+	    };
+	}
+
+	function getValues(context, operator, key, modifier) {
+
+	    var value = context[key],
+	        result = [];
+
+	    if (isDefined(value) && value !== '') {
+	        if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+	            value = value.toString();
+
+	            if (modifier && modifier !== '*') {
+	                value = value.substring(0, parseInt(modifier, 10));
+	            }
+
+	            result.push(encodeValue(operator, value, isKeyOperator(operator) ? key : null));
+	        } else {
+	            if (modifier === '*') {
+	                if (Array.isArray(value)) {
+	                    value.filter(isDefined).forEach(function (value) {
+	                        result.push(encodeValue(operator, value, isKeyOperator(operator) ? key : null));
+	                    });
+	                } else {
+	                    Object.keys(value).forEach(function (k) {
+	                        if (isDefined(value[k])) {
+	                            result.push(encodeValue(operator, value[k], k));
+	                        }
+	                    });
+	                }
+	            } else {
+	                var tmp = [];
+
+	                if (Array.isArray(value)) {
+	                    value.filter(isDefined).forEach(function (value) {
+	                        tmp.push(encodeValue(operator, value));
+	                    });
+	                } else {
+	                    Object.keys(value).forEach(function (k) {
+	                        if (isDefined(value[k])) {
+	                            tmp.push(encodeURIComponent(k));
+	                            tmp.push(encodeValue(operator, value[k].toString()));
+	                        }
+	                    });
+	                }
+
+	                if (isKeyOperator(operator)) {
+	                    result.push(encodeURIComponent(key) + '=' + tmp.join(','));
+	                } else if (tmp.length !== 0) {
+	                    result.push(tmp.join(','));
+	                }
+	            }
+	        }
+	    } else {
+	        if (operator === ';') {
+	            result.push(encodeURIComponent(key));
+	        } else if (value === '' && (operator === '&' || operator === '?')) {
+	            result.push(encodeURIComponent(key) + '=');
+	        } else if (value === '') {
+	            result.push('');
+	        }
+	    }
+
+	    return result;
+	}
+
+	function isDefined(value) {
+	    return value !== undefined && value !== null;
+	}
+
+	function isKeyOperator(operator) {
+	    return operator === ';' || operator === '&' || operator === '?';
+	}
+
+	function encodeValue(operator, value, key) {
+
+	    value = operator === '+' || operator === '#' ? encodeReserved(value) : encodeURIComponent(value);
+
+	    if (key) {
+	        return encodeURIComponent(key) + '=' + value;
+	    } else {
+	        return value;
+	    }
+	}
+
+	function encodeReserved(str) {
+	    return str.split(/(%[0-9A-Fa-f]{2})/g).map(function (part) {
+	        if (!/%[0-9A-Fa-f]/.test(part)) {
+	            part = encodeURI(part);
+	        }
+	        return part;
+	    }).join('');
+	}
+
+	/**
+	 * URL Template (RFC 6570) Transform.
+	 */
+
+	function template (options) {
+
+	    var variables = [],
+	        url = expand(options.url, options.params, variables);
+
+	    variables.forEach(function (key) {
+	        delete options.params[key];
+	    });
+
+	    return url;
+	}
+
+	/**
+	 * Service for URL templating.
+	 */
+
+	var ie = document.documentMode;
+	var el = document.createElement('a');
+
+	function Url(url, params) {
+
+	    var self = this || {},
+	        options = url,
+	        transform;
+
+	    if (isString(url)) {
+	        options = { url: url, params: params };
+	    }
+
+	    options = merge({}, Url.options, self.$options, options);
+
+	    Url.transforms.forEach(function (handler) {
+	        transform = factory(handler, transform, self.$vm);
+	    });
+
+	    return transform(options);
+	}
+
+	/**
+	 * Url options.
+	 */
+
+	Url.options = {
+	    url: '',
+	    root: null,
+	    params: {}
+	};
+
+	/**
+	 * Url transforms.
+	 */
+
+	Url.transforms = [template, query, root];
+
+	/**
+	 * Encodes a Url parameter string.
+	 *
+	 * @param {Object} obj
+	 */
+
+	Url.params = function (obj) {
+
+	    var params = [],
+	        escape = encodeURIComponent;
+
+	    params.add = function (key, value) {
+
+	        if (isFunction(value)) {
+	            value = value();
+	        }
+
+	        if (value === null) {
+	            value = '';
+	        }
+
+	        this.push(escape(key) + '=' + escape(value));
+	    };
+
+	    serialize(params, obj);
+
+	    return params.join('&').replace(/%20/g, '+');
+	};
+
+	/**
+	 * Parse a URL and return its components.
+	 *
+	 * @param {String} url
+	 */
+
+	Url.parse = function (url) {
+
+	    if (ie) {
+	        el.href = url;
+	        url = el.href;
+	    }
+
+	    el.href = url;
+
+	    return {
+	        href: el.href,
+	        protocol: el.protocol ? el.protocol.replace(/:$/, '') : '',
+	        port: el.port,
+	        host: el.host,
+	        hostname: el.hostname,
+	        pathname: el.pathname.charAt(0) === '/' ? el.pathname : '/' + el.pathname,
+	        search: el.search ? el.search.replace(/^\?/, '') : '',
+	        hash: el.hash ? el.hash.replace(/^#/, '') : ''
+	    };
+	};
+
+	function factory(handler, next, vm) {
+	    return function (options) {
+	        return handler.call(vm, options, next);
+	    };
+	}
+
+	function serialize(params, obj, scope) {
+
+	    var array = isArray(obj),
+	        plain = isPlainObject(obj),
+	        hash;
+
+	    each(obj, function (value, key) {
+
+	        hash = isObject(value) || isArray(value);
+
+	        if (scope) {
+	            key = scope + '[' + (plain || hash ? key : '') + ']';
+	        }
+
+	        if (!scope && array) {
+	            params.add(value.name, value.value);
+	        } else if (hash) {
+	            serialize(params, value, key);
+	        } else {
+	            params.add(key, value);
+	        }
+	    });
+	}
+
+	/**
+	 * XDomain client (Internet Explorer).
+	 */
+
+	function xdrClient (request) {
+	    return new PromiseObj(function (resolve) {
+
+	        var xdr = new XDomainRequest(),
+	            handler = function (_ref) {
+	            var type = _ref.type;
+
+
+	            var status = 0;
+
+	            if (type === 'load') {
+	                status = 200;
+	            } else if (type === 'error') {
+	                status = 500;
+	            }
+
+	            resolve(request.respondWith(xdr.responseText, { status: status }));
+	        };
+
+	        request.abort = function () {
+	            return xdr.abort();
+	        };
+
+	        xdr.open(request.method, request.getUrl());
+	        xdr.timeout = 0;
+	        xdr.onload = handler;
+	        xdr.onerror = handler;
+	        xdr.ontimeout = handler;
+	        xdr.onprogress = function () {};
+	        xdr.send(request.getBody());
+	    });
+	}
+
+	/**
+	 * CORS Interceptor.
+	 */
+
+	var ORIGIN_URL = Url.parse(location.href);
+	var SUPPORTS_CORS = 'withCredentials' in new XMLHttpRequest();
+
+	function cors (request, next) {
+
+	    if (!isBoolean(request.crossOrigin) && crossOrigin(request)) {
+	        request.crossOrigin = true;
+	    }
+
+	    if (request.crossOrigin) {
+
+	        if (!SUPPORTS_CORS) {
+	            request.client = xdrClient;
+	        }
+
+	        delete request.emulateHTTP;
+	    }
+
+	    next();
+	}
+
+	function crossOrigin(request) {
+
+	    var requestUrl = Url.parse(Url(request));
+
+	    return requestUrl.protocol !== ORIGIN_URL.protocol || requestUrl.host !== ORIGIN_URL.host;
+	}
+
+	/**
+	 * Body Interceptor.
+	 */
+
+	function body (request, next) {
+
+	    if (isFormData(request.body)) {
+
+	        request.headers.delete('Content-Type');
+	    } else if (isObject(request.body) || isArray(request.body)) {
+
+	        if (request.emulateJSON) {
+	            request.body = Url.params(request.body);
+	            request.headers.set('Content-Type', 'application/x-www-form-urlencoded');
+	        } else {
+	            request.body = JSON.stringify(request.body);
+	        }
+	    }
+
+	    next(function (response) {
+
+	        Object.defineProperty(response, 'data', {
+	            get: function () {
+	                return this.body;
+	            },
+	            set: function (body) {
+	                this.body = body;
+	            }
+	        });
+
+	        return response.bodyText ? when(response.text(), function (text) {
+
+	            var type = response.headers.get('Content-Type');
+
+	            if (isString(type) && type.indexOf('application/json') === 0) {
+
+	                try {
+	                    response.body = JSON.parse(text);
+	                } catch (e) {
+	                    response.body = null;
+	                }
+	            } else {
+	                response.body = text;
+	            }
+
+	            return response;
+	        }) : response;
+	    });
+	}
+
+	/**
+	 * JSONP client.
+	 */
+
+	function jsonpClient (request) {
+	    return new PromiseObj(function (resolve) {
+
+	        var name = request.jsonp || 'callback',
+	            callback = '_jsonp' + Math.random().toString(36).substr(2),
+	            body = null,
+	            handler,
+	            script;
+
+	        handler = function (_ref) {
+	            var type = _ref.type;
+
+
+	            var status = 0;
+
+	            if (type === 'load' && body !== null) {
+	                status = 200;
+	            } else if (type === 'error') {
+	                status = 500;
+	            }
+
+	            resolve(request.respondWith(body, { status: status }));
+
+	            delete window[callback];
+	            document.body.removeChild(script);
+	        };
+
+	        request.params[name] = callback;
+
+	        window[callback] = function (result) {
+	            body = JSON.stringify(result);
+	        };
+
+	        script = document.createElement('script');
+	        script.src = request.getUrl();
+	        script.type = 'text/javascript';
+	        script.async = true;
+	        script.onload = handler;
+	        script.onerror = handler;
+
+	        document.body.appendChild(script);
+	    });
+	}
+
+	/**
+	 * JSONP Interceptor.
+	 */
+
+	function jsonp (request, next) {
+
+	    if (request.method == 'JSONP') {
+	        request.client = jsonpClient;
+	    }
+
+	    next(function (response) {
+
+	        if (request.method == 'JSONP') {
+
+	            return when(response.json(), function (json) {
+
+	                response.body = json;
+
+	                return response;
+	            });
+	        }
+	    });
+	}
+
+	/**
+	 * Before Interceptor.
+	 */
+
+	function before (request, next) {
+
+	    if (isFunction(request.before)) {
+	        request.before.call(this, request);
+	    }
+
+	    next();
+	}
+
+	/**
+	 * HTTP method override Interceptor.
+	 */
+
+	function method (request, next) {
+
+	    if (request.emulateHTTP && /^(PUT|PATCH|DELETE)$/i.test(request.method)) {
+	        request.headers.set('X-HTTP-Method-Override', request.method);
+	        request.method = 'POST';
+	    }
+
+	    next();
+	}
+
+	/**
+	 * Header Interceptor.
+	 */
+
+	function header (request, next) {
+
+	    var headers = assign({}, Http.headers.common, !request.crossOrigin ? Http.headers.custom : {}, Http.headers[toLower(request.method)]);
+
+	    each(headers, function (value, name) {
+	        if (!request.headers.has(name)) {
+	            request.headers.set(name, value);
+	        }
+	    });
+
+	    next();
+	}
+
+	/**
+	 * Timeout Interceptor.
+	 */
+
+	function timeout (request, next) {
+
+	    var timeout;
+
+	    if (request.timeout) {
+	        timeout = setTimeout(function () {
+	            request.abort();
+	        }, request.timeout);
+	    }
+
+	    next(function (response) {
+
+	        clearTimeout(timeout);
+	    });
+	}
+
+	/**
+	 * XMLHttp client.
+	 */
+
+	function xhrClient (request) {
+	    return new PromiseObj(function (resolve) {
+
+	        var xhr = new XMLHttpRequest(),
+	            handler = function (event) {
+
+	            var response = request.respondWith('response' in xhr ? xhr.response : xhr.responseText, {
+	                status: xhr.status === 1223 ? 204 : xhr.status, // IE9 status bug
+	                statusText: xhr.status === 1223 ? 'No Content' : trim(xhr.statusText)
+	            });
+
+	            each(trim(xhr.getAllResponseHeaders()).split('\n'), function (row) {
+	                response.headers.append(row.slice(0, row.indexOf(':')), row.slice(row.indexOf(':') + 1));
+	            });
+
+	            resolve(response);
+	        };
+
+	        request.abort = function () {
+	            return xhr.abort();
+	        };
+
+	        if (request.progress) {
+	            if (request.method === 'GET') {
+	                xhr.addEventListener('progress', request.progress);
+	            } else if (/^(POST|PUT)$/i.test(request.method)) {
+	                xhr.upload.addEventListener('progress', request.progress);
+	            }
+	        }
+
+	        xhr.open(request.method, request.getUrl(), true);
+
+	        if ('responseType' in xhr) {
+	            xhr.responseType = 'blob';
+	        }
+
+	        if (request.credentials === true) {
+	            xhr.withCredentials = true;
+	        }
+
+	        request.headers.forEach(function (value, name) {
+	            xhr.setRequestHeader(name, value);
+	        });
+
+	        xhr.timeout = 0;
+	        xhr.onload = handler;
+	        xhr.onerror = handler;
+	        xhr.send(request.getBody());
+	    });
+	}
+
+	/**
+	 * Base client.
+	 */
+
+	function Client (context) {
+
+	    var reqHandlers = [sendRequest],
+	        resHandlers = [],
+	        handler;
+
+	    if (!isObject(context)) {
+	        context = null;
+	    }
+
+	    function Client(request) {
+	        return new PromiseObj(function (resolve) {
+
+	            function exec() {
+
+	                handler = reqHandlers.pop();
+
+	                if (isFunction(handler)) {
+	                    handler.call(context, request, next);
+	                } else {
+	                    warn('Invalid interceptor of type ' + typeof handler + ', must be a function');
+	                    next();
+	                }
+	            }
+
+	            function next(response) {
+
+	                if (isFunction(response)) {
+
+	                    resHandlers.unshift(response);
+	                } else if (isObject(response)) {
+
+	                    resHandlers.forEach(function (handler) {
+	                        response = when(response, function (response) {
+	                            return handler.call(context, response) || response;
+	                        });
+	                    });
+
+	                    when(response, resolve);
+
+	                    return;
+	                }
+
+	                exec();
+	            }
+
+	            exec();
+	        }, context);
+	    }
+
+	    Client.use = function (handler) {
+	        reqHandlers.push(handler);
+	    };
+
+	    return Client;
+	}
+
+	function sendRequest(request, resolve) {
+
+	    var client = request.client || xhrClient;
+
+	    resolve(client(request));
+	}
+
+	var classCallCheck = function (instance, Constructor) {
+	  if (!(instance instanceof Constructor)) {
+	    throw new TypeError("Cannot call a class as a function");
+	  }
+	};
+
+	/**
+	 * HTTP Headers.
+	 */
+
+	var Headers = function () {
+	    function Headers(headers) {
+	        var _this = this;
+
+	        classCallCheck(this, Headers);
+
+
+	        this.map = {};
+
+	        each(headers, function (value, name) {
+	            return _this.append(name, value);
+	        });
+	    }
+
+	    Headers.prototype.has = function has(name) {
+	        return getName(this.map, name) !== null;
+	    };
+
+	    Headers.prototype.get = function get(name) {
+
+	        var list = this.map[getName(this.map, name)];
+
+	        return list ? list[0] : null;
+	    };
+
+	    Headers.prototype.getAll = function getAll(name) {
+	        return this.map[getName(this.map, name)] || [];
+	    };
+
+	    Headers.prototype.set = function set(name, value) {
+	        this.map[normalizeName(getName(this.map, name) || name)] = [trim(value)];
+	    };
+
+	    Headers.prototype.append = function append(name, value) {
+
+	        var list = this.getAll(name);
+
+	        if (list.length) {
+	            list.push(trim(value));
+	        } else {
+	            this.set(name, value);
+	        }
+	    };
+
+	    Headers.prototype.delete = function _delete(name) {
+	        delete this.map[getName(this.map, name)];
+	    };
+
+	    Headers.prototype.forEach = function forEach(callback, thisArg) {
+	        var _this2 = this;
+
+	        each(this.map, function (list, name) {
+	            each(list, function (value) {
+	                return callback.call(thisArg, value, name, _this2);
+	            });
+	        });
+	    };
+
+	    return Headers;
+	}();
+
+	function getName(map, name) {
+	    return Object.keys(map).reduce(function (prev, curr) {
+	        return toLower(name) === toLower(curr) ? curr : prev;
+	    }, null);
+	}
+
+	function normalizeName(name) {
+
+	    if (/[^a-z0-9\-#$%&'*+.\^_`|~]/i.test(name)) {
+	        throw new TypeError('Invalid character in header field name');
+	    }
+
+	    return trim(name);
+	}
+
+	/**
+	 * HTTP Response.
+	 */
+
+	var Response = function () {
+	    function Response(body, _ref) {
+	        var url = _ref.url;
+	        var headers = _ref.headers;
+	        var status = _ref.status;
+	        var statusText = _ref.statusText;
+	        classCallCheck(this, Response);
+
+
+	        this.url = url;
+	        this.ok = status >= 200 && status < 300;
+	        this.status = status || 0;
+	        this.statusText = statusText || '';
+	        this.headers = new Headers(headers);
+	        this.body = body;
+
+	        if (isString(body)) {
+
+	            this.bodyText = body;
+	        } else if (isBlob(body)) {
+
+	            this.bodyBlob = body;
+
+	            if (isBlobText(body)) {
+	                this.bodyText = blobText(body);
+	            }
+	        }
+	    }
+
+	    Response.prototype.blob = function blob() {
+	        return when(this.bodyBlob);
+	    };
+
+	    Response.prototype.text = function text() {
+	        return when(this.bodyText);
+	    };
+
+	    Response.prototype.json = function json() {
+	        return when(this.text(), function (text) {
+	            return JSON.parse(text);
+	        });
+	    };
+
+	    return Response;
+	}();
+
+	function blobText(body) {
+	    return new PromiseObj(function (resolve) {
+
+	        var reader = new FileReader();
+
+	        reader.readAsText(body);
+	        reader.onload = function () {
+	            resolve(reader.result);
+	        };
+	    });
+	}
+
+	function isBlobText(body) {
+	    return body.type.indexOf('text') === 0 || body.type.indexOf('json') !== -1;
+	}
+
+	/**
+	 * HTTP Request.
+	 */
+
+	var Request = function () {
+	    function Request(options) {
+	        classCallCheck(this, Request);
+
+
+	        this.body = null;
+	        this.params = {};
+
+	        assign(this, options, {
+	            method: toUpper(options.method || 'GET')
+	        });
+
+	        if (!(this.headers instanceof Headers)) {
+	            this.headers = new Headers(this.headers);
+	        }
+	    }
+
+	    Request.prototype.getUrl = function getUrl() {
+	        return Url(this);
+	    };
+
+	    Request.prototype.getBody = function getBody() {
+	        return this.body;
+	    };
+
+	    Request.prototype.respondWith = function respondWith(body, options) {
+	        return new Response(body, assign(options || {}, { url: this.getUrl() }));
+	    };
+
+	    return Request;
+	}();
+
+	/**
+	 * Service for sending network requests.
+	 */
+
+	var CUSTOM_HEADERS = { 'X-Requested-With': 'XMLHttpRequest' };
+	var COMMON_HEADERS = { 'Accept': 'application/json, text/plain, */*' };
+	var JSON_CONTENT_TYPE = { 'Content-Type': 'application/json;charset=utf-8' };
+
+	function Http(options) {
+
+	    var self = this || {},
+	        client = Client(self.$vm);
+
+	    defaults(options || {}, self.$options, Http.options);
+
+	    Http.interceptors.forEach(function (handler) {
+	        client.use(handler);
+	    });
+
+	    return client(new Request(options)).then(function (response) {
+
+	        return response.ok ? response : PromiseObj.reject(response);
+	    }, function (response) {
+
+	        if (response instanceof Error) {
+	            error(response);
+	        }
+
+	        return PromiseObj.reject(response);
+	    });
+	}
+
+	Http.options = {};
+
+	Http.headers = {
+	    put: JSON_CONTENT_TYPE,
+	    post: JSON_CONTENT_TYPE,
+	    patch: JSON_CONTENT_TYPE,
+	    delete: JSON_CONTENT_TYPE,
+	    custom: CUSTOM_HEADERS,
+	    common: COMMON_HEADERS
+	};
+
+	Http.interceptors = [before, timeout, method, body, jsonp, header, cors];
+
+	['get', 'delete', 'head', 'jsonp'].forEach(function (method) {
+
+	    Http[method] = function (url, options) {
+	        return this(assign(options || {}, { url: url, method: method }));
+	    };
+	});
+
+	['post', 'put', 'patch'].forEach(function (method) {
+
+	    Http[method] = function (url, body, options) {
+	        return this(assign(options || {}, { url: url, method: method, body: body }));
+	    };
+	});
+
+	/**
+	 * Service for interacting with RESTful services.
+	 */
+
+	function Resource(url, params, actions, options) {
+
+	    var self = this || {},
+	        resource = {};
+
+	    actions = assign({}, Resource.actions, actions);
+
+	    each(actions, function (action, name) {
+
+	        action = merge({ url: url, params: assign({}, params) }, options, action);
+
+	        resource[name] = function () {
+	            return (self.$http || Http)(opts(action, arguments));
+	        };
+	    });
+
+	    return resource;
+	}
+
+	function opts(action, args) {
+
+	    var options = assign({}, action),
+	        params = {},
+	        body;
+
+	    switch (args.length) {
+
+	        case 2:
+
+	            params = args[0];
+	            body = args[1];
+
+	            break;
+
+	        case 1:
+
+	            if (/^(POST|PUT|PATCH)$/i.test(options.method)) {
+	                body = args[0];
+	            } else {
+	                params = args[0];
+	            }
+
+	            break;
+
+	        case 0:
+
+	            break;
+
+	        default:
+
+	            throw 'Expected up to 4 arguments [params, body], got ' + args.length + ' arguments';
+	    }
+
+	    options.body = body;
+	    options.params = assign({}, options.params, params);
+
+	    return options;
+	}
+
+	Resource.actions = {
+
+	    get: { method: 'GET' },
+	    save: { method: 'POST' },
+	    query: { method: 'GET' },
+	    update: { method: 'PUT' },
+	    remove: { method: 'DELETE' },
+	    delete: { method: 'DELETE' }
+
+	};
+
+	/**
+	 * Install plugin.
+	 */
+
+	function plugin(Vue) {
+
+	    if (plugin.installed) {
+	        return;
+	    }
+
+	    Util(Vue);
+
+	    Vue.url = Url;
+	    Vue.http = Http;
+	    Vue.resource = Resource;
+	    Vue.Promise = PromiseObj;
+
+	    Object.defineProperties(Vue.prototype, {
+
+	        $url: {
+	            get: function () {
+	                return options(Vue.url, this, this.$options.url);
+	            }
+	        },
+
+	        $http: {
+	            get: function () {
+	                return options(Vue.http, this, this.$options.http);
+	            }
+	        },
+
+	        $resource: {
+	            get: function () {
+	                return Vue.resource.bind(this);
+	            }
+	        },
+
+	        $promise: {
+	            get: function () {
+	                var _this = this;
+
+	                return function (executor) {
+	                    return new Vue.Promise(executor, _this);
+	                };
+	            }
+	        }
+
+	    });
+	}
+
+	if (typeof window !== 'undefined' && window.Vue) {
+	    window.Vue.use(plugin);
+	}
+
+	module.exports = plugin;
+
+/***/ },
+/* 64 */
+/***/ function(module, exports) {
+
+	'use strict';
+
+	Object.defineProperty(exports, "__esModule", {
+		value: true
+	});
+	exports.default = {
+		playerList: {},
+		song: {},
+		theme: {
+			headerImg: '',
+			color: ''
+		}
+	};
+
+/***/ },
+/* 65 */
+/***/ function(module, exports) {
+
+	"use strict";
+
+	Object.defineProperty(exports, "__esModule", {
+		value: true
+	});
+	exports.default = {};
+
+/***/ },
+/* 66 */
+/***/ function(module, exports) {
+
+	"use strict";
+
+	Object.defineProperty(exports, "__esModule", {
+		value: true
+	});
+	exports.default = {
+		playerStart: function playerStart(state, song) {
+			state.song = song;
+		},
+		initPlayerList: function initPlayerList(state, playerList) {
+			state.playerList = playerList;
+		}
+	};
+
+/***/ },
+/* 67 */
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+
+	Object.defineProperty(exports, "__esModule", {
+		value: true
+	});
+
+	var _dataApi = __webpack_require__(40);
+
+	var _dataApi2 = _interopRequireDefault(_dataApi);
+
+	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+	exports.default = {
+		state: {
+			mainPage: {
+				carousel: [],
+				newMusicList: [],
+				songlist: [],
+				remvlist: []
+			}
+		},
+		mutations: {},
+		actions: {
+			getMainPageData: function getMainPageData(_ref) {
+				var state = _ref.state;
+
+				_dataApi2.default._api('mainPageData').then(function (body) {
+					state.mainPage.carousel = body.carousel;
+					state.mainPage.newMusicList = body.newMusic;
+				});
+			},
+			getMainSongList: function getMainSongList(_ref2) {
+				var state = _ref2.state;
+
+				_dataApi2.default._api('songlist?limit=10').then(function (songlist) {
+					state.mainPage.songlist = songlist;
+				});
+			},
+			getReMvList: function getReMvList(_ref3) {
+				var state = _ref3.state;
+
+				_dataApi2.default._api('remvlist').then(function (body) {
+					state.mainPage.remvlist = body;
+				});
+			}
+		}
+	}; /**
+	    * 首页初始化数据
+	    */
+
+/***/ },
+/* 68 */
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+
+	Object.defineProperty(exports, "__esModule", {
+		value: true
+	});
+
+	var _getIterator2 = __webpack_require__(41);
+
+	var _getIterator3 = _interopRequireDefault(_getIterator2);
+
+	var _dataApi = __webpack_require__(40);
+
+	var _dataApi2 = _interopRequireDefault(_dataApi);
+
+	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+	exports.default = {
+		state: {},
+		mutations: {},
+		actions: {
+			getSongListIds: function getSongListIds(_ref, id) {
+				var dispatch = _ref.dispatch;
+
+				_dataApi2.default._api('songmusiclist?id=' + id).then(function (body) {
+					dispatch('changeMusicList', body.join(','));
+				});
+			},
+			changeMusicList: function changeMusicList(_ref2, ids) {
+				var commit = _ref2.commit;
+
+				_dataApi2.default._api('songlink?ids=' + ids, 'songinfo?ids=' + ids).then(function (songLink, songInfo) {
+					var _iteratorNormalCompletion = true;
+					var _didIteratorError = false;
+					var _iteratorError = undefined;
+
+					try {
+						for (var _iterator = (0, _getIterator3.default)(songLink.data.songList.keys()), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+							var i = _step.value;
+
+							songLink.data.songList[i].songInfo = songInfo.data.songList[i];
+						}
+					} catch (err) {
+						_didIteratorError = true;
+						_iteratorError = err;
+					} finally {
+						try {
+							if (!_iteratorNormalCompletion && _iterator.return) {
+								_iterator.return();
+							}
+						} finally {
+							if (_didIteratorError) {
+								throw _iteratorError;
+							}
+						}
+					}
+
+					commit('initPlayerList', songLink.data.songList);
+					commit('playerStart', songLink.data.songList[0]);
+				});
+			}
+		}
+	}; /**
+	    * 播放列表数据操作
+	    */
+
+/***/ },
+/* 69 */
+/***/ function(module, exports) {
+
+	"use strict";
+
+	Object.defineProperty(exports, "__esModule", {
+		value: true
+	});
+	exports.default = {
+		state: {
+			themeModelShow: false
+		},
+		mutations: {
+			toggleThemeModelShow: function toggleThemeModelShow(state, show) {
+				state.themeModelShow = show;
+			}
+		}
+	};
+
+/***/ },
+/* 70 */
 /***/ function(module, exports) {
 
 	"use strict";
@@ -10827,17 +13654,17 @@
 	exports.default = filters;
 
 /***/ },
-/* 39 */
+/* 71 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var __vue_exports__, __vue_options__
 	var __vue_styles__ = {}
 
 	/* script */
-	__vue_exports__ = __webpack_require__(40)
+	__vue_exports__ = __webpack_require__(72)
 
 	/* template */
-	var __vue_template__ = __webpack_require__(65)
+	var __vue_template__ = __webpack_require__(99)
 	__vue_options__ = __vue_exports__ = __vue_exports__ || {}
 	if (
 	  typeof __vue_exports__.default === "object" ||
@@ -10849,7 +13676,7 @@
 	if (typeof __vue_options__ === "function") {
 	  __vue_options__ = __vue_options__.options
 	}
-	__vue_options__.__file = "E:\\workspace\\musicPlayer\\src\\app\\app.vue"
+	__vue_options__.__file = "E:\\workspace\\my-music-player\\src\\app\\app.vue"
 	__vue_options__.render = __vue_template__.render
 	__vue_options__.staticRenderFns = __vue_template__.staticRenderFns
 
@@ -10860,9 +13687,9 @@
 	  if (!hotAPI.compatible) return
 	  module.hot.accept()
 	  if (!module.hot.data) {
-	    hotAPI.createRecord("data-v-ea001b90", __vue_options__)
+	    hotAPI.createRecord("data-v-472752dc", __vue_options__)
 	  } else {
-	    hotAPI.reload("data-v-ea001b90", __vue_options__)
+	    hotAPI.reload("data-v-472752dc", __vue_options__)
 	  }
 	})()}
 	if (__vue_options__.functional) {console.error("[vue-loader] app.vue: functional components are not supported and should be defined in plain js files using render functions.")}
@@ -10871,7 +13698,7 @@
 
 
 /***/ },
-/* 40 */
+/* 72 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -10880,11 +13707,11 @@
 		value: true
 	});
 
-	var _main = __webpack_require__(41);
+	var _main = __webpack_require__(73);
 
 	var _main2 = _interopRequireDefault(_main);
 
-	var _main3 = __webpack_require__(54);
+	var _main3 = __webpack_require__(89);
 
 	var _main4 = _interopRequireDefault(_main3);
 
@@ -10925,6 +13752,12 @@
 	   */
 			changeTheme: function changeTheme(themeName) {
 				themeMap.includes(themeName) && (this.mainTheme = themeName);
+			},
+
+			/* 全局点击事件 */
+			globalClick: function globalClick() {
+				/* 隐藏主题设置窗口 */
+				this.$store.commit('toggleThemeModelShow', false);
 			}
 		},
 		components: {
@@ -10934,17 +13767,17 @@
 	};
 
 /***/ },
-/* 41 */
+/* 73 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var __vue_exports__, __vue_options__
 	var __vue_styles__ = {}
 
 	/* script */
-	__vue_exports__ = __webpack_require__(42)
+	__vue_exports__ = __webpack_require__(74)
 
 	/* template */
-	var __vue_template__ = __webpack_require__(53)
+	var __vue_template__ = __webpack_require__(88)
 	__vue_options__ = __vue_exports__ = __vue_exports__ || {}
 	if (
 	  typeof __vue_exports__.default === "object" ||
@@ -10956,7 +13789,7 @@
 	if (typeof __vue_options__ === "function") {
 	  __vue_options__ = __vue_options__.options
 	}
-	__vue_options__.__file = "E:\\workspace\\musicPlayer\\src\\app\\components\\header\\main.vue"
+	__vue_options__.__file = "E:\\workspace\\my-music-player\\src\\app\\components\\header\\main.vue"
 	__vue_options__.render = __vue_template__.render
 	__vue_options__.staticRenderFns = __vue_template__.staticRenderFns
 
@@ -10967,9 +13800,9 @@
 	  if (!hotAPI.compatible) return
 	  module.hot.accept()
 	  if (!module.hot.data) {
-	    hotAPI.createRecord("data-v-ce6879ca", __vue_options__)
+	    hotAPI.createRecord("data-v-1955b7f7", __vue_options__)
 	  } else {
-	    hotAPI.reload("data-v-ce6879ca", __vue_options__)
+	    hotAPI.reload("data-v-1955b7f7", __vue_options__)
 	  }
 	})()}
 	if (__vue_options__.functional) {console.error("[vue-loader] main.vue: functional components are not supported and should be defined in plain js files using render functions.")}
@@ -10978,7 +13811,7 @@
 
 
 /***/ },
-/* 42 */
+/* 74 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -10987,15 +13820,15 @@
 		value: true
 	});
 
-	var _icon = __webpack_require__(43);
+	var _icon = __webpack_require__(75);
 
 	var _icon2 = _interopRequireDefault(_icon);
 
-	var _winBar = __webpack_require__(47);
+	var _winBar = __webpack_require__(79);
 
 	var _winBar2 = _interopRequireDefault(_winBar);
 
-	var _settingBar = __webpack_require__(50);
+	var _settingBar = __webpack_require__(82);
 
 	var _settingBar2 = _interopRequireDefault(_settingBar);
 
@@ -11011,6 +13844,11 @@
 			};
 		},
 
+		methods: {
+			pageHistory: function pageHistory(type) {
+				window.history[type]();
+			}
+		},
 		components: {
 			icon: _icon2.default,
 			winBar: _winBar2.default,
@@ -11044,17 +13882,17 @@
 	//
 
 /***/ },
-/* 43 */
+/* 75 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var __vue_exports__, __vue_options__
 	var __vue_styles__ = {}
 
 	/* script */
-	__vue_exports__ = __webpack_require__(44)
+	__vue_exports__ = __webpack_require__(76)
 
 	/* template */
-	var __vue_template__ = __webpack_require__(46)
+	var __vue_template__ = __webpack_require__(78)
 	__vue_options__ = __vue_exports__ = __vue_exports__ || {}
 	if (
 	  typeof __vue_exports__.default === "object" ||
@@ -11066,7 +13904,7 @@
 	if (typeof __vue_options__ === "function") {
 	  __vue_options__ = __vue_options__.options
 	}
-	__vue_options__.__file = "E:\\workspace\\musicPlayer\\src\\app\\components\\common\\icon.vue"
+	__vue_options__.__file = "E:\\workspace\\my-music-player\\src\\app\\components\\common\\icon.vue"
 	__vue_options__.render = __vue_template__.render
 	__vue_options__.staticRenderFns = __vue_template__.staticRenderFns
 
@@ -11077,9 +13915,9 @@
 	  if (!hotAPI.compatible) return
 	  module.hot.accept()
 	  if (!module.hot.data) {
-	    hotAPI.createRecord("data-v-1c448786", __vue_options__)
+	    hotAPI.createRecord("data-v-7267b119", __vue_options__)
 	  } else {
-	    hotAPI.reload("data-v-1c448786", __vue_options__)
+	    hotAPI.reload("data-v-7267b119", __vue_options__)
 	  }
 	})()}
 	if (__vue_options__.functional) {console.error("[vue-loader] icon.vue: functional components are not supported and should be defined in plain js files using render functions.")}
@@ -11088,7 +13926,7 @@
 
 
 /***/ },
-/* 44 */
+/* 76 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -11104,21 +13942,22 @@
 	//
 
 	/* 阿里图标文件 */
-	__webpack_require__(45);
+	__webpack_require__(77);
 
 	exports.default = {
 		props: ['iconHref']
 	};
 
 /***/ },
-/* 45 */
+/* 77 */
 /***/ function(module, exports) {
 
 	'use strict';
 
 	;(function (window) {
 
-	  var svgSprite = '<svg>' + '' + '<symbol id="icon-chuangkoufangda" viewBox="0 0 1024 1024">' + '' + '<path d="M341.4682 569.1464H173.47993599999998c-61.7656 0-111.9918 50.2272-111.9918 111.9928v167.9872c0 61.7667 50.2262 111.9939 111.9918 111.9939h167.989248c61.738 0 111.9928-50.2272 111.9928-111.9939v-167.9872C453.461 619.3736 403.2061 569.1464 341.4682 569.1464zM397.4636 849.1264c0 30.8705-25.1269 55.9964-55.9954 55.9964H173.47993599999998c-30.8961 0-55.9954-25.1249-55.9954-55.9964v-167.9872c0-30.8695 25.0993-55.9985 55.9954-55.9985h167.989248c30.8685 0 55.9954 25.1279 55.9954 55.9985V849.1264zM529.2524 532.9459 761.4392 300.759v184.392704c0 15.4757 12.5225 27.9992 27.9982 27.9992 15.4481 0 27.9982-12.5235 27.9982-27.9992V233.16889600000002c0-15.4747-12.5501-27.9972-27.9982-27.9972H537.4545919999999c-15.4757 0-27.9982 12.5225-27.9982 27.9972 0 15.4757 12.5225 27.9982 27.9982 27.9982h184.392704L489.6604 493.355c-10.9363 10.9363-10.9363 28.6536 0 39.5909 5.4692 5.4682 12.6321 8.2022 19.796 8.2022C516.6193 541.1482 523.7832 538.4141 529.2524 532.9459zM845.4328 65.1817H173.47993599999998c-61.7656 0-111.9918 50.2272-111.9918 111.9928v307.97823999999997c0 15.4757 12.5225 27.9992 27.9982 27.9992 15.4481 0 27.9982-12.5235 27.9982-27.9992v-307.97823999999997c0-30.8695 25.0993-55.9964 55.9954-55.9964h671.952896c30.8695 0 55.9974 25.1279 55.9974 55.9964v671.952896c0 30.8705-25.1279 55.9964-55.9974 55.9964h-307.97823999999997c-15.4757 0-27.9982 12.5235-27.9982 27.9982 0 15.4767 12.5225 28.0003 27.9982 28.0003h307.97823999999997c61.738 0 111.9928-50.2272 111.9928-111.9939V177.17350399999998C957.4257 115.4079 907.1708 65.1817 845.4328 65.1817z"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-bofang" viewBox="0 0 1024 1024">' + '' + '<path d="M508 140.0064c-206.2272 0-373.3888 167.168-373.3888 373.3888 0 206.2272 167.1616 373.3888 373.3888 373.3888s373.3888-167.1616 373.3888-373.3888C881.3888 307.1808 714.2272 140.0064 508 140.0064zM508 818.8992c-168.7232 0-305.4976-136.7744-305.4976-305.4976 0-168.7232 136.7744-305.504 305.4976-305.504s305.4976 136.7808 305.4976 305.504C813.4976 682.1248 676.7232 818.8992 508 818.8992zM406.1696 666.1504l288.5312-169.7216L406.1696 360.6464V666.1504z"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-yinliangjingyin" viewBox="0 0 1024 1024">' + '' + '<path d="M576 896 256 704 256 320 576 128Z"  ></path>' + '' + '<path d="M0 320l256 0 0 384-256 0 0-384Z"  ></path>' + '' + '<path d="M958.4 398.848 913.152 353.6 800 466.688 686.848 353.6 641.6 398.848 754.752 512 641.6 625.152 686.848 670.4 800 557.248 913.152 670.4 958.4 625.152 845.248 512Z"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-yinliangzhong" viewBox="0 0 1024 1024">' + '' + '<path d="M719.52 831.52c-12.288 0-24.576-4.672-33.952-14.048-18.752-18.752-18.752-49.12 0-67.872 131.008-131.008 131.008-344.16 0-475.168-18.752-18.752-18.752-49.152 0-67.872 18.752-18.752 49.152-18.752 67.872 0 81.6 81.6 126.528 190.08 126.528 305.472 0 115.392-44.928 223.872-126.528 305.472-9.376 9.376-21.664 14.048-33.952 14.048zM549.024 741.024c-12.288 0-24.576-4.672-33.952-14.048-18.752-18.752-18.752-49.12 0-67.872 81.088-81.088 81.088-213.056 0-294.144-18.752-18.752-18.752-49.152 0-67.872 18.752-18.752 49.12-18.752 67.872 0 118.528 118.528 118.528 311.392 0 429.92-9.376 9.376-21.664 14.048-33.952 14.048zM401.344 78.656c25.664-25.664 46.656-16.96 46.656 19.328l0 828c0 36.288-20.992 44.992-46.656 19.328l-241.344-241.344-160 0 0-384 160 0 241.344-241.344z"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-ttpodicon" viewBox="0 0 1024 1024">' + '' + '<path d="M815.045407 826.541813c-18.198218-20.869307-76.860685-88.349187-110.542175-127.250172l68.990106 0L773.493338 185.452759l84.138744 0 0 513.839905 67.838838 0C892.265287 737.579665 834.40001 804.258297 815.045407 826.541813z"  ></path>' + '' + '<path d="M64.491463 689.618327l483.5468 0 0 58.014298-483.5468 0 0-58.014298Z"  ></path>' + '' + '<path d="M64.491463 456.056873l576.145571 0 0 58.014298-576.145571 0 0-58.014298Z"  ></path>' + '' + '<path d="M64.491463 222.490304l576.145571 0 0 58.014298-576.145571 0 0-58.014298Z"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-ttpodicon1" viewBox="0 0 1024 1024">' + '' + '<path d="M682.871669 633.987309c0 57.20691 46.984081 103.750969 104.732319 103.750969 57.747215 0 104.732319-46.544059 104.732319-103.750969L892.336308 522.256598c0-57.20691-46.985104-103.749946-104.732319-103.749946-57.748239 0-104.732319 46.543036-104.732319 103.749946L682.871669 633.987309zM731.209584 522.256598c0-30.800493 25.301246-55.865355 56.393381-55.865355 31.093159 0 56.393381 25.064862 56.393381 55.865355l0 111.729687c0 30.800493-25.301246 55.866379-56.393381 55.866379-31.093159 0-56.393381-25.065885-56.393381-55.866379L731.209584 522.256598z"  ></path>' + '' + '<path d="M956.786179 633.987309c0-13.217023-10.819416-23.941272-24.170492-23.941272-13.351076 0-24.168446 10.725272-24.168446 23.941272 0 66.011436-54.208623 119.710452-120.844276 119.710452-66.6377 0-120.845299-53.699016-120.845299-119.710452 0-13.217023-10.819416-23.941272-24.169469-23.941272-13.351076 0-24.168446 10.725272-24.168446 23.941272 0 84.268242 63.164598 154.00349 145.012721 165.683507l0 65.759703-56.393381 0c-13.351076 0-24.168446 10.725272-24.168446 23.943318 0 13.217023 10.81737 23.941272 24.168446 23.941272L868.166839 913.315108c13.351076 0 24.168446-10.725272 24.168446-23.941272 0-13.218046-10.81737-23.943318-24.168446-23.943318l-56.395428 0 0-65.759703C893.621581 787.989775 956.786179 718.254527 956.786179 633.987309z"  ></path>' + '' + '<path d="M634.532731 522.256598c0-12.801561 1.918699-25.145703 5.282307-36.894282-11.154038-3.163039-22.61916-5.940292-34.361599-8.351202 51.614541-36.162618 85.472674-95.626941 85.472674-162.878624 0-110.014626-90.350774-199.519126-201.408149-199.519126s-201.408149 89.5045-201.408149 199.519126c0 69.347414 35.939537 130.481773 90.293469 166.251442C196.677405 528.959254 62.533218 693.586708 62.533218 888.747573c0 13.220093 10.81737 23.941272 24.168446 23.941272 13.351076 0 24.169469-10.721179 24.169469-23.941272 0-206.829626 169.858596-375.095957 378.646829-375.095957 53.881165 0 102.084003 6.859221 145.014768 19.569708L634.532731 522.256598zM489.517963 465.767026c-84.402295 0-153.070234-68.022233-153.070234-151.634536 0-83.610256 68.667939-151.634536 153.070234-151.634536 84.404342 0 153.070234 68.02428 153.070234 151.634536C642.589221 397.74377 573.922305 465.767026 489.517963 465.767026z"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-sousuo" viewBox="0 0 1024 1024">' + '' + '<path d="M125.872291 465.670835c0-189.738365 153.796782-343.535147 343.535147-343.535147 189.738365 0 343.535147 153.797805 343.535147 343.535147 0 189.737342-153.796782 343.535147-343.535147 343.535147C279.669072 809.205982 125.872291 655.408177 125.872291 465.670835zM722.799542 779.406283l182.254927 182.204785 52.816926-52.832276L776.346085 727.201294c60.066027-70.406536 96.341209-161.732521 96.341209-261.530458 0-222.731804-180.549076-403.28088-403.28088-403.28088S66.126558 242.939031 66.126558 465.670835c0 222.730781 180.549076 403.289066 403.28088 403.289066C565.398676 868.958878 653.558551 835.409784 722.799542 779.406283z"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-iconfontclosesmall" viewBox="0 0 1024 1024">' + '' + '<path d="M596.722 511.999 924.94 183.781c23.299-23.299 23.299-61.422 0-84.721s-61.422-23.299-84.721 0L512.001 427.278 183.781 99.06c-23.299-23.299-61.422-23.299-84.721 0s-23.299 61.422 0 84.721L427.28 511.999 99.06 840.219c-23.299 23.299-23.299 61.422 0 84.721s61.422 23.299 84.721 0l328.219-328.219L840.219 924.94c23.299 23.299 61.422 23.299 84.721 0s23.299-61.422 0-84.721L596.722 511.999z"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-icsuoxiaotubiao" viewBox="0 0 1024 1024">' + '' + '<path d="M924.906969 82.6017l-812.23796 0c-16.018493 0-29.008499 12.987105-29.008499 29.008499l0 406.11898 58.016997 0 0-377.110482 754.220963 0 0 754.220963-377.110482 0 0 58.016997 406.11898 0c16.018493 0 29.008499-12.987105 29.008499-29.008499l0-812.23796C953.915467 95.588805 940.925462 82.6017 924.906969 82.6017zM83.66051 952.853756l348.101983 0 0-348.101983-348.101983 0L83.66051 952.853756zM141.677507 662.768771l232.067989 0 0 232.067989-232.067989 0L141.677507 662.768771zM489.77949 285.66119l0 261.076487 261.076487 0 0-58.016997-162.032771 0 269.573076-269.573076-41.02672-41.02672-269.573076 269.573076L547.796487 285.66119 489.77949 285.66119z"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-yunduan" viewBox="0 0 1024 1024">' + '' + '<path d="M917.954779 425.097768c-40.84015-40.84015-93.963045-64.927755-151.037948-68.834738-26.361391-46.957475-64.293305-86.594217-110.209054-115.03292-50.133817-31.051203-107.949594-47.464011-167.195953-47.464011-76.903507 0-151.125953 27.823696-208.991872 78.346369-52.831252 46.125527-88.848561 108.227933-102.630449 176.357614-82.845847 23.356964-141.253094 99.278097-141.253094 186.927343 0 51.435463 19.905352 99.910501 56.04955 136.49779 30.118971 30.487362 68.625984 49.808406 110.369713 55.769165l0 1.984191L750.384295 829.64857c63.299675 0 122.81107-24.650423 167.570483-69.409836s69.409836-104.270808 69.409836-167.570483S962.714192 469.857181 917.954779 425.097768zM750.384295 778.48326 231.015468 778.48326l-2.044566-0.026606c-37.815257-0.494257-73.28919-15.595186-99.887988-42.520419-26.622334-26.947745-41.283242-62.653969-41.283242-100.538811 0-69.068052 49.213865-128.245849 117.019157-140.712789l18.066471-3.321652 2.62785-18.180058c9.079796-62.821791 40.564881-120.541377 88.656179-162.528654 48.543599-42.382273 110.814852-65.723887 175.34147-65.723887 49.719378 0 98.219999 13.761422 140.255371 39.797401 31.191396 19.317974 57.987692 44.790112 78.805834 74.68498-23.131837 4.139274-45.606711 11.68104-66.428945 22.387893-32.121582 16.518209-60.511165 40.609906-82.098833 69.670779-8.42488 11.341303-6.062066 27.366278 5.28026 35.792181 11.341303 8.425903 27.365254 6.062066 35.792181-5.28026 16.947997-22.812565 39.225373-41.721217 64.425312-54.680367 26.38902-13.570063 54.934147-20.450774 84.84334-20.450774 102.458533 0 185.815009 83.356476 185.815009 185.815009S852.842829 778.48326 750.384295 778.48326z"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-xiazai" viewBox="0 0 1024 1024">' + '' + '<path d="M915.972635 490.681462c-14.129812 0-25.582655 11.453866-25.582655 25.582655l0 364.297007c0 8.463766-6.885827 15.349593-15.349593 15.349593l-736.780463 0c-8.463766 0-15.349593-6.885827-15.349593-15.349593l0-364.297007c0-14.128789-11.453866-25.582655-25.582655-25.582655s-25.582655 11.453866-25.582655 25.582655l0 364.297007c0 36.676317 29.838585 66.514903 66.514903 66.514903l736.780463 0c36.676317 0 66.514903-29.838585 66.514903-66.514903l0-364.297007C941.55529 502.135328 930.102447 490.681462 915.972635 490.681462z"  ></path>' + '' + '<path d="M488.561172 775.854387c4.995781 4.995781 11.541871 7.492648 18.090007 7.492648s13.094226-2.496867 18.090007-7.492648l241.500263-241.500263c9.990538-9.990538 9.990538-26.188452 0-36.178991-9.991562-9.990538-26.188452-9.990538-36.178991 0L532.23281 696.002734 532.23281 102.848413c0-14.128789-11.453866-25.582655-25.582655-25.582655-14.128789 0-25.582655 11.453866-25.582655 25.582655l0 593.154321L283.239899 498.17411c-9.991562-9.990538-26.188452-9.990538-36.178991 0-9.990538 9.990538-9.990538 26.188452 0 36.178991L488.561172 775.854387z"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-msnui-zoom-finger" viewBox="0 0 1031 1024">' + '' + '<path d="M450.785 532.909q22.672-2.519 31.909 6.717t7.558 31.070q-1.68 22.673-5.038 51.222t-7.137 58.359-7.137 59.199-5.878 54.581q-2.519 26.871-15.114 34.009t-27.711-8.817q-9.236-9.236-23.512-22.673t-24.352-22.673q-10.916-10.916-20.153-7.558t-20.993 15.114q-12.595 12.595-33.168 33.588t-42.826 43.665-43.245 44.085-34.428 34.009q-5.038 5.878-12.175 10.916t-15.114 7.137-16.794-0.42-18.893-12.595q-5.878-5.878-9.656-9.236t-7.137-6.717l-18.473-18.473q-18.473-18.473-14.695-31.909t22.252-32.749q8.397-8.397 27.711-27.291t40.726-40.726 41.565-42.406 31.909-32.329q16.794-16.794 22.673-28.97t-5.878-23.932q-8.397-8.397-20.993-22.252t-21.832-23.093q-15.114-15.114-11.336-27.291t27.291-14.695 52.901-6.298 60.459-7.137 61.298-7.137 55.421-6.298zM951.252 108.855q18.473 18.473 16.374 33.168t-21.412 34.009q-9.236 9.236-28.131 28.551t-41.146 41.565-42.826 43.245-32.329 32.749q-16.794 16.794-20.572 26.871t7.977 21.832q8.397 8.397 19.733 20.572t20.573 21.412q15.114 15.114 10.916 27.291t-26.871 14.695q-23.512 2.519-52.901 6.298t-60.879 7.137-61.718 7.137-54.581 6.298q-43.665 5.038-40.306-36.948 2.519-22.672 5.458-51.222t6.717-58.779 7.137-59.619 5.878-54.581q2.519-26.871 15.114-34.009t28.551 8.817q4.198 5.038 10.916 11.336t13.855 13.015 13.855 13.015 11.756 11.336q10.916 10.916 17.633 9.656t18.473-13.015q12.595-12.595 33.589-34.009t44.085-44.504 44.504-44.924 34.848-35.268q5.038-5.038 11.756-10.497t14.275-7.977 15.954-0.839 18.473 11.756q5.878 5.878 9.656 9.236t7.137 6.717l7.558 7.558z"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-yifu" viewBox="0 0 1024 1024">' + '' + '<path d="M965.911 310.531476 791.510972 136.133493c-13.022595-13.020548-30.9325-19.649526-49.380664-18.228153-1.740644-0.150426-3.421936-0.224104-5.070482-0.224104l-92.914156 0-6.516414 3.624551c-34.420951 19.146059-78.341253 29.689183-123.668601 29.689183s-89.245603-10.543124-123.666554-29.689183L383.776663 117.680213l-92.916203 0c-23.691585 0-44.986587 12.924357-55.995315 33.450856L62.476937 323.520301C50.576909 335.419306 44.023656 351.240643 44.023656 368.068913s6.553253 32.648584 18.452257 44.548612l125.95262 125.954667c10.540054 10.538007 24.157189 16.878412 38.826284 18.181081l0 304.398802c0 35.07382 28.532847 63.606667 63.60462 63.606667l446.199365 0c35.07382 0 63.606667-28.532847 63.606667-63.606667L800.665469 543.807427c14.843056-1.210571 28.638247-7.576559 39.287795-18.223037l125.956713-125.956713C990.474442 375.064234 990.474442 335.094918 965.911 310.531476zM925.254022 358.974791 799.297308 484.931504c-1.315972 1.318018-2.818185 1.593288-3.845585 1.593288-1.003863 0-2.477424-0.260943-3.796466-1.50733l-48.482201-45.769416 0 421.904029c0 3.371794-2.740414 6.113231-6.113231 6.113231L290.860461 867.265306c-3.368724 0-6.111185-2.740414-6.111185-6.113231L284.749276 454.265064l-48.103578 43.809785c-1.303692 1.186012-2.742461 1.435699-3.719718 1.435699-1.026376 0-2.526543-0.275269-3.842515-1.591241L103.129822 371.963617c-1.331321-1.333368-1.612731-2.855024-1.612731-3.894703s0.280386-2.561335 1.612731-3.894703l174.021405-174.019359 5.560646-4.989641 2.491751-6.155187c0.716314-1.768273 2.62785-3.835352 5.658883-3.835352l78.233805 0c42.079374 21.817911 91.979878 33.313733 144.865365 33.313733s102.789061-11.495822 144.867412-33.313733l78.196966 0c0.309038 0.00921 0.613984 0.059352 0.915859 0.103354l4.105504 0.589424 4.105504-0.594541c1.308809-0.184195 3.042289-0.144286 4.702092 1.514493L925.254022 351.184361C927.401941 353.332281 927.401941 356.826871 925.254022 358.974791z"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-iconfontshezhi" viewBox="0 0 1024 1024">' + '' + '<path d="M511.605515 331.923692c-98.876961 0-179.283246 80.407308-179.283246 179.283246 0 98.877985 80.406285 179.283246 179.283246 179.283246 98.877985 0 179.283246-80.405261 179.283246-179.283246C690.888761 412.331 610.4835 331.923692 511.605515 331.923692zM511.605515 645.669372c-74.256214 0-134.462434-60.183707-134.462434-134.462434 0-74.277704 60.205197-134.461411 134.462434-134.461411S646.06795 436.928211 646.06795 511.206938C646.06795 585.485665 585.862753 645.669372 511.605515 645.669372zM959.81363 600.848561l0-179.283246-129.975237-21.51399c-3.591805-12.102642-8.53642-24.203238-14.794961-35.409464l77.078493-107.128903L765.276982 130.668015l-107.10639 77.103052c-11.20418-6.2831-23.306822-11.206226-35.410488-14.794961L601.248162 62.998823l-179.283246 0-21.512966 129.97626c-12.56313 3.589758-24.205285 8.973372-35.848463 14.794961l-106.23044-75.746148L131.526057 258.412444l76.204589 106.23044c-5.821589 11.206226-10.767228 23.306822-14.356986 35.409464L63.397401 421.566338l0 179.283246 129.97626 21.511943c4.02671 12.540617 8.973372 25.102724 15.231913 36.745902l-76.182077 106.23044 126.845966 126.845966 106.668415-76.641541c11.205203 5.383614 22.410406 10.307763 34.513048 13.896498l21.512966 129.97626 179.283246 0 21.511943-129.97626c12.562107-4.048199 24.64326-8.973372 36.307927-15.253402l107.127879 77.101006 126.845966-126.845966-77.101006-107.564831c5.361101-11.205203 10.305717-22.410406 13.897521-34.514071L959.81363 600.848561zM786.854417 609.624435c-2.886747 9.739828-7.133468 19.149129-11.335163 27.838022-7.090489 14.750959-5.558599 32.237215 3.983731 45.543266l54.9321 76.641541-73.008804 73.008804-76.1831-54.843072c-7.768941-5.603625-16.938788-8.448416-26.173103-8.448416-7.311523 0-14.598486 1.794879-21.252023 5.384637-8.643867 4.617158-18.055215 8.555863-28.756951 12.013615-16.018835 5.164626-27.750017 18.778692-30.55183 35.366486l-15.275915 92.464925L459.978694 914.594241l-15.275915-92.464925c-2.844791-16.938788-15.078417-30.792307-31.514761-35.671431-9.738805-2.867304-19.149129-7.135514-27.882024-11.337209-6.15007-2.910283-12.781094-4.39817-19.368116-4.39817-9.235338 0-18.361183 2.867304-26.131147 8.425903l-75.788104 54.406121-73.007781-73.009827 54.05615-75.30715c9.93528-13.875009 11.161201-32.301683 2.998287-47.359634-4.399193-8.206916-8.338922-17.748223-12.014638-29.237905-5.164626-15.998369-18.777669-27.728528-35.366486-30.506804l-92.464925-15.298428L108.219235 459.579093l92.464925-15.296381c16.938788-2.824325 30.792307-15.057951 35.672454-31.493272 2.735297-9.191336 6.544043-18.689664 11.118222-27.489074 7.79043-14.9679 6.500041-33.067116-3.326768-46.789653l-54.012148-75.263148 73.030293-72.725348 75.394131 53.729715c7.746428 5.513574 16.851806 8.337899 26.043143 8.337899 6.850012 0 13.700023-1.575892 20.025079-4.750187 9.104355-4.530177 18.777669-9.103332 28.145014-11.751648 16.632819-4.793166 29.04143-18.689664 31.930223-35.804461l15.275915-92.464925 103.253642 0 15.275915 92.464925c2.844791 16.938788 15.07944 30.792307 31.514761 35.673477 9.323343 2.7793 18.427698 6.544043 26.26213 10.942213 6.828522 3.807722 14.356986 5.690606 21.88545 5.690606 9.235338 0 18.383696-2.824325 26.175149-8.425903l76.204589-54.866608 72.964802 72.964802-54.865585 76.203566c-10.17678 14.116509-11.205203 32.850176-2.736321 48.104601 4.400217 7.79043 8.163937 16.85283 10.94119 26.219151 4.882194 16.435321 18.735713 28.668946 35.673477 31.493272l92.464925 15.296381 0 103.254665-92.464925 15.298428C805.589107 580.954465 791.735587 593.189114 786.854417 609.624435z"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-set" viewBox="0 0 1024 1024">' + '' + '<path d="M661.635507 917.742954l-0.005117 0c-16.273638-0.008186-32.097022-6.733355-42.312688-18.008142-13.921058-15.263635-58.030671-54.954613-94.13496-54.954613-35.856649 0-80.649831 39.921221-93.514837 53.901631-10.19213 11.084453-25.903973 17.700127-42.020022 17.700127-7.680936 0-14.922874-1.469468-21.540595-4.377704l-1.158383-0.503467-109.745497-61.373813-1.092891-0.76134c-19.97596-13.986549-27.579125-41.342594-17.679661-63.633273 0.076748-0.167822 10.123568-23.351847 10.123568-44.490284 0-64.145949-52.189639-116.336612-116.335588-116.336612l-3.889587 0c-0.240477 0.008186-0.478907 0.013303-0.704035 0.013303-18.378579 0-33.337269-16.322757-38.123272-41.587164-0.378623-2.025123-9.359158-49.937342-9.359158-87.687108 0-37.753859 8.977465-85.671195 9.359158-87.695295 4.840238-25.582655 20.125363-42.014906 38.82833-41.574884l3.889587 0c64.145949 0 116.335588-52.189639 116.335588-116.332519 0-21.132296-10.041704-44.311205-10.148128-44.543496-9.889231-22.26612-2.234901-49.619094 17.832134-63.560618l1.136893-0.787946 115.818819-63.620993 1.206478-0.511653c6.5246-2.780323 13.665231-4.189416 21.23258-4.189416 16.08535 0 31.823799 6.472412 42.114167 17.315364 13.70821 14.350846 57.036018 51.681056 92.107791 51.681056 34.744315 0 77.809133-36.59036 91.471294-50.692542 10.232039-10.619872 25.859971-16.98279 41.781592-16.98279 7.720845 0 14.995529 1.460258 21.627577 4.340865l1.170662 0.511653 111.865787 62.147432 1.104147 0.774643c20.016893 13.96506 27.638477 41.323151 17.730826 63.625086-0.071631 0.169869-10.123568 23.354917-10.123568 44.49233 0 64.142879 52.189639 116.332519 116.333542 116.332519l3.895727 0c18.673292-0.416486 33.979906 15.989159 38.822191 41.574884 0.38067 2.0241 9.359158 49.936319 9.359158 87.688131 0 37.754882-8.978489 85.670172-9.366322 87.693248-4.837168 25.584702-20.143783 41.955554-38.824237 41.573861l-3.886517 0c-64.143902 0-116.333542 52.190663-116.333542 116.336612 0 21.128203 10.041704 44.304042 10.144034 44.534286 9.882068 22.25691 2.243087 49.613978-17.785062 63.566758l-1.119497 0.785899-113.756857 62.872956-1.182942 0.5137C676.272879 916.317489 669.162948 917.742954 661.635507 917.742954L661.635507 917.742954zM658.180825 864.149339c0.506537 0.331551 1.946328 0.895393 3.454682 0.895393 0.062422 0 0.118704 0 0.170892-0.004093l106.279558-58.739822c-2.566452-5.956665-14.294564-34.884508-14.294564-65.050552 0-90.231047 71.064522-164.1772 160.166863-168.801521 1.280156-7.081279 8.241708-46.917566 8.241708-76.801177 0-29.882588-6.961552-69.700455-8.241708-76.8022-89.100294-4.627391-160.166863-78.573543-160.166863-168.799474 0-30.214139 11.764951-59.175751 14.307867-65.090461l-104.555288-58.089c-0.119727-0.005117-0.268106-0.016373-0.438998-0.016373-1.780553 0-3.443425 0.650823-3.996011 1.023306-1.75804 1.804089-16.909112 17.173125-38.681998 32.485879-32.225959 22.669302-62.696947 34.167171-90.574878 34.167171-28.141944 0-58.859549-11.724019-91.292216-34.839483-21.905916-15.609513-37.131689-31.275307-38.890752-33.112142-0.555655-0.376577-2.24411-1.045819-4.03899-1.045819-0.140193 0-0.26299 0.005117-0.372483 0.011256l-108.298542 59.481719c2.599198 6.033413 14.283308 34.909068 14.283308 65.024969 0 90.225931-71.063499 164.172083-160.166863 168.799474-1.279133 7.086395-8.240685 46.916543-8.240685 76.8022 0 29.879518 6.960529 69.695339 8.247848 76.795037 89.094154 4.629437 160.1597 78.57252 160.1597 168.801521 0 30.277584-11.811 59.286268-14.32731 65.12423l102.501512 57.31538c0.064468 0.00921 0.143263 0.00921 0.230244 0.00921 1.49505 0 2.914376-0.549515 3.422959-0.876973 1.916653-2.054799 17.223267-18.261922 39.277562-34.425044 32.865525-24.089651 64.0999-36.300764 92.835362-36.300764 29.004591 0 60.477396 12.443403 93.535303 36.994566C640.897184 845.551772 656.272359 862.058724 658.180825 864.149339L658.180825 864.149339zM525.556249 649.984654c-85.424578 0-154.923442-69.50091-154.923442-154.927535 0-85.424578 69.499887-154.924465 154.923442-154.924465 85.427648 0 154.931628 69.499887 154.931628 154.924465C680.487877 580.483744 610.983897 649.984654 525.556249 649.984654L525.556249 649.984654zM525.556249 392.82883c-56.367799 0-102.224196 45.858444-102.224196 102.226243 0 56.371892 45.857421 102.231359 102.224196 102.231359 56.372915 0 102.237499-45.859467 102.237499-102.231359C627.793748 438.687274 581.931211 392.82883 525.556249 392.82883L525.556249 392.82883z"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-calendar" viewBox="0 0 1025 1024">' + '' + '<path d="M938.722986 96.00832l-138.687786 0 0-63.99872c0-17.694366-14.294754-32.0096-32.0096-32.0096s-32.0096 14.294754-32.0096 32.0096l0 63.99872-191.99616 0 0-63.99872c0-17.694366-14.335713-32.0096-32.0096-32.0096s-32.0096 14.294754-32.0096 32.0096l0 63.99872-191.99616 0 0-63.99872c0-17.694366-14.335713-32.0096-32.0096-32.0096s-32.0096 14.294754-32.0096 32.0096l0 63.99872-138.646827 0c-47.144017 0-85.338453 38.173957-85.338453 85.317974l0 757.335253c0 47.144017 38.214916 85.338453 85.338453 85.338453l853.323094 0c47.144017 0 85.317974-38.214916 85.317974-85.338453l0-757.335253c0-47.144017-38.173957-85.317974-85.317974-85.317974zM960.042239 938.641067c0 11.775764-9.563969 21.339733-21.319254 21.339733l-853.323094 0c-11.775764 0-21.339733-9.563969-21.339733-21.339733l0-757.335253c0-11.734805 9.563969-21.319254 21.339733-21.319254l138.646827 0 0 63.99872c0 17.694366 14.335713 32.0096 32.0096 32.0096s32.0096-14.294754 32.0096-32.0096l0-63.99872 191.99616 0 0 63.99872c0 17.694366 14.335713 32.0096 32.0096 32.0096s32.0096-14.294754 32.0096-32.0096l0-63.99872 191.99616 0 0 63.99872c0 17.694366 14.294754 32.0096 32.0096 32.0096s32.0096-14.294754 32.0096-32.0096l0-63.99872 138.687786 0c11.734805 0 21.319254 9.563969 21.319254 21.319254l0 757.335253zM224.067199 383.99232l127.99744 0 0 96.00832-127.99744 0zM224.067199 543.99936l127.99744 0 0 96.00832-127.99744 0zM224.067199 703.98592l127.99744 0 0 96.00832-127.99744 0zM448.052479 703.98592l127.99744 0 0 96.00832-127.99744 0zM448.052479 543.99936l127.99744 0 0 96.00832-127.99744 0zM448.052479 383.99232l127.99744 0 0 96.00832-127.99744 0zM672.058239 703.98592l127.99744 0 0 96.00832-127.99744 0zM672.058239 543.99936l127.99744 0 0 96.00832-127.99744 0zM672.058239 383.99232l127.99744 0 0 96.00832-127.99744 0z"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-renzhengyouxiang" viewBox="0 0 1024 1024">' + '' + '<path d="M885.727285 134.724401 137.500119 134.724401c-41.463344 0-75.17412 33.162284-75.17412 74.002434l0 451.134771c0 40.804335 33.710776 73.92978 75.17412 73.92978l748.227166 0c41.60763 0 75.172073-33.125445 75.172073-73.92978l0-451.134771C960.899358 167.885662 927.334915 134.724401 885.727285 134.724401L885.727285 134.724401 885.727285 134.724401zM867.738585 187.703009 569.345568 447.849958c-26.030863 22.833031-45.301765 34.168194-57.732889 34.168194s-31.699979-11.335163-57.769728-34.168194L155.488819 187.703009 867.738585 187.703009 867.738585 187.703009 867.738585 187.703009zM118.231263 643.334187 118.231263 235.765655l233.051847 200.969151L118.231263 643.334187 118.231263 643.334187 118.231263 643.334187zM157.425937 680.774915l233.893005-204.224288 38.317701 33.07121c22.267143 19.140942 49.725518 28.957519 81.975013 28.957519 32.431643 0 59.671031-9.816576 82.048691-28.957519l38.317701-33.07121 233.893005 204.224288L157.425937 680.774915 157.425937 680.774915 157.425937 680.774915zM904.995117 643.334187 671.978063 436.734806l233.017054-200.969151L904.995117 643.334187 904.995117 643.334187 904.995117 643.334187zM904.995117 643.334187"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-shangyi" viewBox="0 0 1024 1024">' + '' + '<path d="M723.271798 891.177925c-141.552923 0-283.10687 0-424.659793 0-7.079232-1.813299-14.623046-2.618641-21.155832-5.621021-24.229844-11.136641-35.814694-30.792307-35.839253-57.211003-0.085958-92.047416-0.033769-184.094832-0.033769-276.143271 0-1.252527-0.099261-2.51324 0.017396-3.755534 0.232291-2.486634-0.716314-3.682879-3.303232-4.010337-13.936407-1.760087-25.282826-8.54256-35.060517-18.321274-38.297234-38.302351-76.587306-76.611865-114.925473-114.873284-8.745175-8.728802-14.859429-18.863626-17.510816-31.000038-0.424672-1.943258-0.949628-3.865028-1.428535-5.79703 0-4.384867 0-8.768711 0-13.153578 0.248663-0.3776 0.671289-0.733711 0.721431-1.136893 1.885953-15.170514 9.625218-27.022447 20.267603-37.617759 51.593052-51.362808 103.020328-102.893438 154.451698-154.417929 2.51631-2.520403 4.725628-5.409197 6.740518-8.357342 11.248182-16.458857 26.723641-26.093285 46.64332-26.550703 29.261441-0.671289 58.549487-0.288572 87.825254-0.211824 2.042519 0.005117 4.172019 0.997724 6.108115 1.870604 10.392698 4.683672 20.48045 10.168594 31.144324 14.100136 34.870182 12.855796 70.989821 17.023722 108.001783 14.259772 34.94079-2.608407 68.017116-11.483542 98.78691-28.523637 2.058892-1.139963 4.705162-1.711991 7.079232-1.718131 30.215162-0.078795 60.433394 0.204661 90.64651-0.052189 17.412578-0.148379 32.197306 5.631254 44.419675 17.833157 54.29151 54.200436 108.642372 108.342544 162.698522 162.777317 24.125467 24.294312 23.904433 60.305481-0.200568 84.591607-38.712697 39.002292-77.642334 77.788667-116.541273 116.604718-8.708336 8.688893-18.971074 14.722306-31.222095 17.033955-6.750751 1.274016-6.745634 1.305739-6.745634 8.096399-0.001023 95.972818-0.031722 191.944614 0.021489 287.917432 0.013303 24.006763-9.543354 42.608423-30.269397 55.175647C741.734288 887.946324 732.546022 889.685945 723.271798 891.177925zM295.511387 449.142393c0 3.209088 0 5.039783 0 6.870478 0 123.213229 0 246.426459 0.002047 369.639688 0 1.722224-0.01842 3.445472 0.047072 5.16565 0.153496 3.975545 2.308579 5.966898 6.229888 6.108115 1.407046 0.051165 2.817162 0.040932 4.226255 0.040932 136.677892 0.002047 273.354761 0.002047 410.032654 0 1.409093 0 2.820232 0.01535 4.225231-0.056282 3.711532-0.189312 5.749958-2.158153 5.978155-5.872754 0.105401-1.716084 0.058328-3.442402 0.058328-5.164626 0.002047-128.066771 0.002047-256.133541 0.002047-384.200312 0-1.792832 0-3.585665 0-6.515391 2.168386 1.980097 3.420913 3.089361 4.6366 4.237511 12.637832 11.927657 25.272593 23.858384 37.902238 35.796274 5.869684 5.547343 7.339152 5.536087 13.102413-0.227174 37.416168-37.420261 74.830289-74.843592 112.243387-112.2659 6.384407-6.386454 6.380314-7.560186-0.059352-14.000875-48.819892-48.821939-97.640808-97.642854-146.462746-146.46377-4.206812-4.206812-8.3072-8.529257-12.68081-12.554944-1.5104-1.390673-3.64911-2.750647-5.592368-2.89698-5.572926-0.418532-11.193947-0.236384-16.795525-0.240477-20.039405-0.013303-40.080857-0.115634-60.118216 0.100284-3.443425 0.036839-7.176446 0.835018-10.260691 2.339278-35.537378 17.334807-73.251328 26.260084-112.51661 28.293393-53.042053 2.746554-104.150058-5.484921-152.156422-29.347398-1.363044-0.677429-2.935865-1.319042-4.41352-1.324158-23.64042-0.081864-47.281863-0.144286-70.920236 0.097214-2.066055 0.021489-5.349845 1.77339-5.936199 3.461845-1.929955 5.556553-6.253424 8.851599-10.082636 12.682857-52.803623 52.80874-105.612363 105.612363-158.415986 158.422126-5.942339 5.943362-5.939269 7.426133 0.00307 13.367449 30.66644 30.66337 61.33902 61.322647 92.009554 91.981924 7.30743 7.305383 14.58723 14.639418 21.935592 21.903869 3.877307 3.833305 6.045693 3.89368 10.05296 0.396019 2.711761-2.366907 5.328355-4.844332 7.990998-7.267521C271.341918 471.128127 282.906302 460.609563 295.511387 449.142393z"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-bofangqizanting" viewBox="0 0 1024 1024">' + '' + '<path d="M511.844457 959.411983c-247.190869 0-447.578782-200.38075-447.578782-447.578782 0-247.190869 200.387913-447.618691 447.578782-447.618691s447.578782 200.428845 447.578782 447.618691C959.423239 759.031233 759.035326 959.411983 511.844457 959.411983L511.844457 959.411983zM368.275621 737.518267l62.210877 0L430.486498 286.302655l-62.210877 0L368.275621 737.518267zM591.140455 286.141996l0 451.215612 62.210877 0L653.351332 286.141996 591.140455 286.141996z"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-yinlediantai" viewBox="0 0 1024 1024">' + '' + '<path d="M329.955556 512C334.119822 510.202311 325.154133 512 329.955556 512L329.955556 512z"  ></path>' + '' + '<path d="M694.044444 512C698.845867 512 689.880178 510.202311 694.044444 512L694.044444 512z"  ></path>' + '' + '<path d="M887.466667 477.866667C888.900267 481.644089 887.466667 473.588622 887.466667 477.866667L887.466667 477.866667z"  ></path>' + '' + '<path d="M136.487822 477.934933 136.533333 477.866667 136.510578 477.775644Z"  ></path>' + '' + '<path d="M877.613511 570.072178C883.689244 563.882667 887.466667 555.463111 887.466667 546.133333l0-68.266667c-17.658311-190.941867-179.928178-352.733867-375.466667-352.733867-195.1744 0-357.1712 161.1776-375.307378 351.6416 0 0.045511 0.022756 0.091022 0.022756 0.136533 0 0.2048-0.113778 0.364089-0.136533 0.546133C136.578844 477.5936 136.556089 477.730133 136.533333 477.866667l0 68.266667c0 9.329778 3.777422 17.749333 9.853156 23.938844C112.184889 604.956444 91.022222 652.6976 91.022222 705.399467c0 106.814578 86.607644 193.422222 193.422222 193.422222 10.581333 0 33.3824 1.615644 44.259556 0.136533-1.365333 0.341333 4.846933 1.479111 1.251556-0.091022 18.8416 0 11.377778-15.291733 11.377778-34.156089L341.333333 546.133333c0-18.864356 7.463822-34.133333-11.377778-34.133333-10.422044-1.752178-34.588444-0.022756-45.511111-0.022756-37.637689 0-72.658489 10.922667-102.4 29.559467l0-52.315022c6.052978-176.901689 151.574756-318.577778 329.955556-318.577778 178.403556 0 323.333689 141.676089 329.386667 318.577778L841.955556 541.536711c-29.718756-18.614044-64.762311-29.559467-102.4-29.559467-10.922667 0-35.089067-1.729422-45.511111 0.022756-18.8416 0-11.377778 15.268978-11.377778 34.133333l0 318.555022c0 18.8416-7.463822 34.133333 11.377778 34.133333-3.572622 1.547378 2.571378 0.432356 1.251556 0.091022 10.899911 1.456356 33.678222-0.113778 44.259556-0.113778 106.814578 0 193.422222-86.607644 193.422222-193.399467C932.977778 652.674844 911.815111 604.933689 877.613511 570.072178zM284.444444 557.488356c3.8912 0 7.554844 0.841956 11.377778 1.160533l0 293.523911c-3.822933 0.295822-7.486578 1.137778-11.377778 1.137778-81.692444 0-147.911111-66.218667-147.911111-147.911111S202.752 557.488356 284.444444 557.488356zM739.555556 853.287822c-3.8912 0-7.554844-0.841956-11.377778-1.160533L728.177778 558.648889c3.822933-0.318578 7.486578-1.160533 11.377778-1.160533 81.692444 0 147.911111 66.218667 147.911111 147.888356C887.466667 787.069156 821.248 853.287822 739.555556 853.287822z"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-guanbi" viewBox="0 0 1024 1024">' + '' + '<path d="M575.37 511.977l371.506-371.461c17.498-17.499 17.498-45.848 0-63.348-17.499-17.497-45.85-17.497-63.349 0L512.021 448.674 140.473 77.126c-17.5-17.499-45.848-17.499-63.348 0-17.499 17.497-17.499 45.849 0 63.346l371.55 371.505-371.55 371.55c-17.499 17.499-17.499 45.845 0 63.347 17.273 17.27 46.088 17.258 63.348 0l371.548-371.551c0 0 371.376 371.378 371.506 371.508 17.257 17.258 46.118 17.227 63.349 0 17.498-17.499 17.498-45.849 0-63.348L575.37 511.977z"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-zhutishangyiqu" viewBox="0 0 1024 1024">' + '' + '<path d="M865.336374 379.030569"  ></path>' + '' + '<path d="M511.707334 959.224718c-247.174496 0-447.549106-200.37461-447.549106-447.549106S264.533862 64.12753 511.707334 64.12753s447.549106 200.37461 447.549106 447.549106S758.88183 959.224718 511.707334 959.224718zM683.550121 416.702564c0.37146-64.528666-27.208689-80.500429-82.741469-47.913243-55.532781 32.587186-111.251803 64.85203-167.156044 96.79351-15.035438 8.590656-25.988908 17.182334-32.936133 25.77299l0-113.945145c0-16.807804-13.625322-30.433126-30.433126-30.433126s-30.433126 13.625322-30.433126 30.433126l0 268.528849c0 16.807804 13.625322 30.433126 30.433126 30.433126s30.433126-13.625322 30.433126-30.433126L400.716474 535.636327c6.948249 8.590656 17.900695 17.182334 32.936133 25.77299 55.904241 31.94148 111.623263 64.206324 167.156044 96.79351 55.532781 32.587186 83.112929 16.616446 82.741469-47.913243C683.178661 545.760918 683.178661 481.232253 683.550121 416.702564z"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-zhutixiayiqu" viewBox="0 0 1024 1024">' + '' + '<path d="M865.336374 379.030569"  ></path>' + '' + '<path d="M511.707334 64.12753c247.174496 0 447.549106 200.37461 447.549106 447.549106S758.88183 959.224718 511.707334 959.224718 64.159252 758.850108 64.159252 511.675612 264.533862 64.12753 511.707334 64.12753zM339.865571 606.649684c-0.37146 64.528666 27.208689 80.500429 82.741469 47.913243 55.532781-32.587186 111.251803-64.85203 167.156044-96.79351 15.035438-8.590656 25.988908-17.182334 32.936133-25.77299l0 113.945145c0 16.807804 13.625322 30.433126 30.433126 30.433126s30.433126-13.625322 30.433126-30.433126L683.565471 377.411699c0-16.807804-13.625322-30.433126-30.433126-30.433126s-30.433126 13.625322-30.433126 30.433126l0 110.304222c-6.948249-8.590656-17.900695-17.182334-32.936133-25.77299-55.904241-31.94148-111.623263-64.206324-167.156044-96.79351-55.532781-32.587186-83.112929-16.616446-82.741469 47.913243C340.237031 477.591329 340.237031 542.119995 339.865571 606.649684z"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-guangbodiantai" viewBox="0 0 1024 1024">' + '' + '<path d="M856.485158 861.677245C936.891155 763.867808 981.6 641.388618 981.6 512.12121 981.6 382.738797 936.811245 260.158162 856.27481 162.309447 846.166733 150.028516 828.016854 148.26707 815.735923 158.375148 803.454992 168.483225 801.693546 186.633103 811.801622 198.914034 883.927587 286.544347 924 396.216998 924 512.12121 924 627.922461 883.99911 737.504278 811.990083 825.099274 801.889354 837.38625 803.661658 855.535069 815.948634 865.635798 828.23561 875.736528 846.384432 873.964221 856.485158 861.677245L856.485158 861.677245Z"  ></path>' + '' + '<path d="M164.753057 162.322754C84.34706 260.132193 39.638216 382.611382 39.638216 511.87879 39.638216 641.261203 84.426972 763.841837 164.963407 861.690554 175.071485 873.971485 193.221363 875.732931 205.502293 865.624851 217.783225 855.516774 219.54467 837.366896 209.436593 825.085965 137.310628 737.455654 97.238216 627.783002 97.238216 511.87879 97.238216 396.077539 137.239105 286.49572 209.248134 198.900727 219.348863 186.613751 217.576558 168.46493 205.289582 158.364202 193.002606 148.263474 174.853786 150.035778 164.753057 162.322754L164.753057 162.322754Z"  ></path>' + '' + '<path d="M334.643498 319.711013C290.431204 373.492819 265.838216 440.864928 265.838216 511.936358 265.838216 583.07103 290.475155 650.498925 334.759146 704.302294 344.867222 716.583226 363.017101 718.344669 375.298032 708.236592 387.578963 698.128515 389.340406 679.978637 379.23233 667.697706 343.35881 624.112739 323.438218 569.592829 323.438218 511.936358 323.438218 454.331088 343.323248 399.856349 379.138576 356.288986 389.239306 344.00201 387.467002 325.85319 375.180022 315.752461 362.893046 305.651733 344.744227 307.424037 334.643498 319.711013L334.643498 319.711013Z"  ></path>' + '' + '<path d="M679.35224 704.288986C723.564534 650.507181 748.15752 583.135072 748.15752 512.063642 748.15752 440.92897 723.520582 373.501075 679.236592 319.697707 669.128515 307.416775 650.978637 305.65533 638.697706 315.763407 626.416774 325.871485 624.655331 344.021363 634.763408 356.302294 670.636928 399.887261 690.55752 454.407171 690.55752 512.063642 690.55752 569.668912 670.67249 624.143651 634.857162 667.711014 624.756432 679.99799 626.528736 698.14681 638.815712 708.247539 651.102691 718.348266 669.25151 716.575962 679.35224 704.288986L679.35224 704.288986Z"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-yy2" viewBox="0 0 1024 1024">' + '' + '<path d="M263.751374 957.486559l-18.009793 0c-58.531828 0-106.523833-47.889677-106.523833-106.523833L139.217748 578.462276c0-58.531828 47.889677-106.523833 106.523833-106.523833l18.009793 0c58.531828 0 106.523833 47.889677 106.523833 106.523833l0 272.602778C370.275207 909.596882 322.283202 957.486559 263.751374 957.486559z"  ></path>' + '' + '<path d="M779.077046 958.509843l-18.009793 0c-58.531828 0-106.523833-47.889677-106.523833-106.523833L654.54342 579.48556c0-58.531828 47.889677-106.523833 106.523833-106.523833l18.009793 0c58.531828 0 106.523833 47.889677 106.523833 106.523833l0 272.602778C885.600879 910.620166 837.711202 958.509843 779.077046 958.509843z"  ></path>' + '' + '<path d="M98.388728 726.633756 98.388728 541.82872c0-226.452683 177.744379-418.523034 404.094734-423.537124 234.945938-5.321075 423.127811 185.316678 423.127811 419.034676l0 189.307485c0 15.553912 12.58639 28.24263 28.24263 28.24263l0 0c15.553912 0 28.24263-12.58639 28.24263-28.24263L982.096532 539.782152c0-263.495553-215.605876-485.445788-479.101429-480.431698C247.583492 64.159888 42.005796 272.705106 42.005796 529.24233l0 197.391426c0 15.553912 12.58639 28.24263 28.24263 28.24263l0 0C85.802338 754.774058 98.388728 742.187669 98.388728 726.633756z"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-erji" viewBox="0 0 1024 1024">' + '' + '<path d="M127.043976 739.943502l-58.558697 7.4159c-0.773619-6.096858-37.673018-311.126017 121.392768-491.031433 66.794265-75.575256 168.167071-129.082914 321.31917-129.082914 158.018943 0 261.21221 54.91675 328.187601 132.085294C997.404784 441.375499 953.953156 747.041154 953.953156 747.041154l-58.4666-8.280594c0.409322-2.775206 38.036291-280.913924-100.691283-440.754353-64.381309-74.164117-159.793356-111.747083-283.598057-111.747083-119.846552 0-213.07384 36.718273-277.092899 109.153002C93.556281 454.43391 126.680702 736.895073 126.997927 739.625254L127.043976 739.943502"  ></path>' + '' + '<path d="M806.368866 894.668423 717.810924 894.668423 717.810924 569.966203 806.368866 569.966203 806.368866 894.668423 806.368866 894.668423Z"  ></path>' + '' + '<path d="M304.595788 894.668423 216.036823 894.668423 216.036823 569.966203 304.595788 569.966203 304.595788 894.668423 304.595788 894.668423Z"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-bofang2" viewBox="0 0 1024 1024">' + '' + '<path d="M384.00192 682.672128c0 46.937408 30.728755 62.291034 68.27008 34.135552l204.788736-153.601792c37.540301-28.155482 37.540301-74.238886 0-102.395392L452.272 307.208704C414.730675 279.053222 384.00192 294.406848 384.00192 341.344256L384.00192 682.672128z"  ></path>' + '' + '<path d="M512 42.681728c258.788566 0 469.326976 210.53841 469.326976 469.325952 0 258.788566-210.53841 469.326976-469.326976 469.326976-258.787542 0-469.325952-210.53841-469.325952-469.326976C42.674048 253.221162 253.212458 42.681728 512 42.681728M512 0.01536c-282.78667 0-511.99232 229.246609-511.99232 511.99232 0 282.788718 229.20565 511.99232 511.99232 511.99232 282.704751 0 511.99232-229.204626 511.99232-511.99232C1023.99232 229.261969 794.704751 0.01536 512 0.01536L512 0.01536z"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-diantai" viewBox="0 0 1024 1024">' + '' + '<path d="M879.232 715.392c40.64-66.752 62.528-143.488 62.528-223.36 0-237.312-192.384-429.76-429.76-429.76-237.312 0-429.696 192.384-429.696 429.76 0 75.84 19.712 148.864 56.576 213.248 7.936 13.76 25.344 18.496 39.104 10.624 13.696-7.808 18.496-25.344 10.624-39.04-32-55.744-49.024-119.04-49.024-184.832 0-205.632 166.784-372.416 372.416-372.416 205.76 0 372.352 166.784 372.352 372.416 0 69.312-18.88 135.744-54.144 193.536-8.256 13.504-4.032 31.104 9.472 39.424C853.248 733.184 870.848 728.896 879.232 715.392zM732.224 613.44c24.512-40.064 37.632-86.144 37.632-134.08 0-142.464-115.392-257.856-257.856-257.856-142.4 0-257.792 115.392-257.792 257.856 0 45.504 11.84 89.344 33.92 128 7.872 13.76 25.344 18.432 39.104 10.56 13.76-7.808 18.496-25.344 10.688-39.04C320.64 548.8 311.424 514.816 311.424 479.36 311.424 368.576 401.28 278.848 512 278.848s200.512 89.728 200.512 200.512c0 37.312-10.112 73.152-29.12 104.256-8.256 13.504-4.032 31.104 9.472 39.36C706.496 631.232 724.096 626.944 732.224 613.44zM678.144 651.52c-1.984-9.792-6.976-19.392-15.488-28.544C654.144 613.44 646.4 606.528 639.36 602.24S625.28 594.368 618.112 591.424C611.008 588.416 603.264 585.152 595.008 581.568c-8.384-3.52-17.92-9.344-28.992-17.472C553.152 555.328 542.912 546.304 535.36 537.088 527.808 527.936 521.472 519.744 516.288 512.512 511.36 505.472 501.312 490.56 496.448 486.464l0 0.448C492.544 482.048 486.72 478.784 479.936 478.784c-12.032 0-21.696 9.6-21.696 21.504l0 308.352c-19.2-11.712-43.136-18.88-69.632-18.88-62.144 0-112.576 38.528-112.576 86.016s50.432 85.952 112.576 85.952c62.144 0 112.512-38.464 112.512-85.952 0 0 0.512-9.408 0.512-10.304l0-274.56c0.576-4.864 2.368-6.336 4.224-7.104C510.336 581.696 516.48 584.32 524.608 591.744c8.384 8.448 19.008 17.536 31.68 27.264 12.736 9.728 27.264 16.192 43.968 19.328 15.744 2.88 27.392 7.552 35.008 14.08 7.488 6.592 12.224 16.768 14.016 30.528 1.152 8.576 2.752 14.4 4.736 17.472 1.984 3.2 4.224 4.928 6.848 5.312 2.624 0.32 5.76-2.048 9.344-7.168s6.4-11.84 7.872-19.904C680 670.528 679.872 661.504 678.144 651.52z"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-wodegedan" viewBox="0 0 1025 1024">' + '' + '<path d="M957.678592 317.6448c-5.799936-9.921536-18.53952-13.280256-28.474368-7.493632l-166.518784 97.135616c-7.673856 4.482048-11.365376 13.12768-9.976832 21.41184-0.19456 1.124352-0.347136 2.262016-0.347136 3.427328l0 206.345216c-25.033728-24.561664-59.29472-39.742464-97.135616-39.742464-76.640256 0-138.765312 62.125056-138.765312 138.765312 0 76.640256 62.125056 138.766336 138.765312 138.766336s138.765312-62.125056 138.765312-138.766336L793.991168 437.233664l156.194816-91.113472C960.120832 340.319232 963.465216 327.580672 957.678592 317.6448zM655.224832 834.630656c-53.646336 0-97.135616-43.48928-97.135616-97.135616 0-53.646336 43.48928-97.135616 97.135616-97.135616 53.64736 0 97.135616 43.48928 97.135616 97.135616C752.360448 791.141376 708.871168 834.630656 655.224832 834.630656z"  ></path>' + '' + '<path d="M562.367488 547.811328c5.203968-10.241024 1.096704-22.771712-9.158656-27.961344-17.799168-9.024512-36.1216-16.37888-54.895616-22.049792 56.433664-32.275456 94.471168-93.057024 94.471168-162.726912 0-103.463936-83.884032-187.333632-187.333632-187.333632-0.001024 0-0.002048 0-0.003072 0s-0.002048 0-0.003072 0c-103.463936 0-187.333632 83.869696-187.333632 187.333632 0 68.46464 36.731904 128.338944 91.557888 161.019904-141.867008 39.876608-246.177792 170.395648-246.177792 324.836352 0 11.48928 9.325568 20.814848 20.814848 20.814848 11.48928 0 20.814848-9.325568 20.814848-20.814848 0-163.07712 132.673536-295.737344 295.737344-295.737344 46.98624 0 91.918336 10.684416 133.548032 31.791104C544.606208 562.173952 557.164544 558.094336 562.367488 547.811328zM508.473344 232.045568c26.363904 26.366976 42.669056 62.793728 42.669056 103.028736s-16.305152 76.66176-42.669056 103.028736c-26.366976 26.366976-62.79168 42.6752-103.02464 42.6752-80.482304-0.002048-145.700864-65.234944-145.700864-145.703936 0-80.468992 65.21856-145.701888 145.700864-145.703936C445.681664 189.371392 482.106368 205.679616 508.473344 232.045568z"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-bofang1" viewBox="0 0 1024 1024">' + '' + '<path d="M512 52.481282c-249.221108 0-451.255521 202.034413-451.255521 451.255521s202.033389 451.255521 451.255521 451.255521 451.255521-202.034413 451.255521-451.255521S761.221108 52.481282 512 52.481282zM703.246719 529.409508 417.663448 694.290743c-19.763113 11.409864-44.466748-2.852978-44.466748-25.672706L373.196701 338.855568c0-22.819728 24.703635-37.08257 44.466748-25.672706l285.583271 164.881235C723.009831 489.473961 723.009831 517.999644 703.246719 529.409508z"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-jiahao1" viewBox="0 0 1024 1024">' + '' + '<path d="M863.328262 481.340895l-317.344013 0.099772L545.984249 162.816826c0-17.664722-14.336138-32.00086-32.00086-32.00086s-31.99914 14.336138-31.99914 32.00086l0 318.400215-322.368714-0.17718c-0.032684 0-0.063647 0-0.096331 0-17.632039 0-31.935493 14.239806-32.00086 31.904529-0.096331 17.664722 14.208843 32.031824 31.871845 32.095471l322.59234 0.17718 0 319.167424c0 17.695686 14.336138 32.00086 31.99914 32.00086s32.00086-14.303454 32.00086-32.00086L545.982529 545.440667l317.087703-0.099772c0.063647 0 0.096331 0 0.127295 0 17.632039 0 31.935493-14.239806 32.00086-31.904529S880.960301 481.404542 863.328262 481.340895z"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-iconfontbiaozhunmoban01" viewBox="0 0 1024 1024">' + '' + '<path d="M685.424818 155.291832l-39.476083-9.712199-125.352963 509.493923c-82.655512-65.398476-205.016327-34.17331-243.86103 45.712111-12.666484 25.993001-6.018064 57.95597 0.202615 75.089186 33.17354 91.364871 153.168472 84.049255 233.44275 13.19144 33.023114-29.148877 43.258223-60.231803 62.442144-138.205689L650.673339 334.437955c47.178509 10.099009 113.477494 86.86437 118.413923 142.888338 3.103688 35.539424-7.522324 79.317487-31.753191 105.942891-6.149047 6.729262-24.789593 29.28293-15.446807 27.576055 17.396205-3.178389 25.749454-9.743922 43.581588-26.340925 16.188704-15.068184 31.66928-39.888476 38.125319-56.249095C872.507704 353.224834 667.787112 296.462039 685.424818 155.291832"  ></path>' + '' + '<path d="M512 981.675032c-63.398936 0-124.909871-12.420891-182.823885-36.915771-55.929824-23.655769-106.157785-57.519018-149.287071-100.648304-43.129286-43.128263-76.992535-93.356224-100.649328-149.287071-24.495904-57.914014-36.915771-119.423927-36.915771-182.823885 0-63.398936 12.419867-124.909871 36.915771-182.822862 23.656793-55.930847 57.520041-106.157785 100.649328-149.287071 43.129286-43.129286 93.356224-76.992535 149.287071-100.649328 57.914014-24.495904 119.42495-36.915771 182.823885-36.915771s124.908848 12.419867 182.822862 36.915771c55.930847 23.656793 106.157785 57.520041 149.287071 100.649328 43.129286 43.128263 76.992535 93.356224 100.648304 149.287071 24.495904 57.912991 36.915771 119.423927 36.915771 182.822862 0 63.399959-12.420891 124.909871-36.915771 182.823885-23.655769 55.929824-57.519018 106.157785-100.648304 149.287071-43.128263 43.129286-93.355201 76.992535-149.287071 100.648304C636.908848 969.254142 575.398936 981.675032 512 981.675032zM512 73.024154c-59.267848 0-116.755144 11.604292-170.864506 34.490535-52.271504 22.10853-99.217722 53.762461-139.538033 94.081749s-71.973218 87.267553-94.082772 139.538033c-22.886243 54.108339-34.490535 111.595634-34.490535 170.864506s11.604292 116.755144 34.490535 170.864506c22.10853 52.271504 53.763484 99.218746 94.082772 139.538033s87.266529 71.973218 139.538033 94.081749c54.109362 22.886243 111.596657 34.490535 170.864506 34.490535 59.267848 0 116.755144-11.604292 170.864506-34.490535 52.271504-22.10853 99.218746-53.762461 139.538033-94.081749s71.973218-87.266529 94.081749-139.538033c22.886243-54.109362 34.490535-111.596657 34.490535-170.864506s-11.604292-116.755144-34.490535-170.864506c-22.10853-52.271504-53.762461-99.218746-94.081749-139.538033s-87.266529-71.973218-139.538033-94.081749C628.755144 84.628446 571.267848 73.024154 512 73.024154z"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-thinup" viewBox="0 0 1024 1024">' + '' + '<path d="M4.928 762.215l506.112-536.832 508.096 536.768-34.879 33.024-473.151-499.904-471.296 499.84z"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-thindown" viewBox="0 0 1024 1024">' + '' + '<path d="M1019.072 261.785l-506.112 536.832-508.096-536.768 34.879-33.024 473.151 499.904 471.296-499.84z"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-jiantou-copy" viewBox="0 0 1024 1024">' + '' + '<path d="M703.625 62c16.447 0 32.898 6.278 45.453 18.834 25.111 25.113 25.111 65.793 0 90.903l-340.326 340.263 340.326 340.263c25.111 25.081 25.111 65.793 0 90.906-25.111 25.111-65.793 25.111-90.906 0l-385.84-385.715c-12.054-12.053-18.833-28.376-18.833-45.451s6.779-33.397 18.833-45.451l385.838-385.715c12.555-12.554 29.004-18.833 45.453-18.833z"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-yinlexianxing" viewBox="0 0 1024 1024">' + '' + '<path d="M896.325667 103.521748c0-2.509147-0.440022-4.892427-1.192152-7.107885l-1.650593-15.972786c-1.213641-11.790534-11.645225-19.777439-23.26896-17.72878L339.751473 156.2476c-9.595542 1.714038-16.578584 9.616008-17.560958 18.857487-2.446725 3.51301-3.889587 7.820106-3.889587 12.4608L318.300928 727.164454c-18.877953-10.662851-40.829917-16.808828-64.224744-16.808828-70.935586 0-128.449487 56.279794-128.449487 125.646652 0 69.368904 57.513902 125.606743 128.449487 125.606743S382.525672 905.371182 382.525672 836.002278c0-4.848425-0.272199-9.614985-0.815575-14.300704 0.543376-1.880837 0.815575-3.88754 0.815575-5.936199L382.525672 383.124817l449.574229-79.277578 0 297.709449c-18.877953-10.704806-40.829917-16.808828-64.224744-16.808828-70.935586 0-128.449487 56.237839-128.449487 125.606743 0 69.408813 57.513902 125.646652 128.449487 125.646652s128.449487-56.237839 128.449487-125.646652c0-4.76656-0.272199-9.533121-0.815575-14.176884 0.543376-1.880837 0.815575-3.845585 0.815575-5.852288L896.324644 103.521748zM254.076184 898.639874c-35.478026 0-64.224744-28.182876-64.224744-62.929238s28.746718-62.929238 64.224744-62.929238 64.224744 28.182876 64.224744 62.929238S289.55421 898.639874 254.076184 898.639874zM767.87618 772.781398c-35.479049 0-64.225767-28.180829-64.225767-62.969147 0-34.748409 28.746718-62.929238 64.225767-62.929238 35.478026 0 64.224744 28.180829 64.224744 62.929238C832.0999 744.600569 803.354206 772.781398 767.87618 772.781398zM832.0999 238.5777 382.525672 317.855278 382.525672 214.074633l449.574229-78.189803L832.0999 238.5777z"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-yinle" viewBox="0 0 1024 1024">' + '' + '<path d="M844.743872 64.641229l-483.775168 80.814584c-1.567705 0.25071-3.031033 0.710175-4.453429 1.254573l-17.475 0c-11.915377 0-21.38403 9.532097-21.38403 21.280676l0 553.029462c-18.875906-10.912537-40.825824-17.140379-64.216557-17.140379-70.927399 0-128.433114 57.359382-128.433114 128.139425S182.512289 960.15695 253.439688 960.15695c70.926376 0 128.433114-57.359382 128.433114-128.139425 0-5.184069-0.314155-10.285251-0.899486-15.259542 0.585331-1.964748 0.899486-4.013407 0.899486-6.187933l0-449.764564 449.513854-79.267345 0 311.298955c-18.875906-10.870582-40.825824-17.142425-64.216557-17.142425-70.927399 0-128.433114 57.401338-128.433114 128.183428 0 70.738088 57.505715 128.139425 128.433114 128.139425 70.926376 0 128.432091-57.401338 128.432091-128.139425 0-5.184069-0.313132-10.285251-0.898463-15.301498 0.585331-1.966795 0.898463-4.015454 0.898463-6.187933l0-597.97307c0-10.45205-7.587815-19.190061-17.579377-20.946055-3.491521-2.173502-7.881504-3.051499-12.710486-2.257413l-11.370978 1.922792-1.170662 0C849.927941 63.135946 847.21004 63.679321 844.743872 64.641229z"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-arr" viewBox="0 0 1024 1024">' + '' + '<path d="M300.295344 63.815421 756.236584 510.525416 300.295344 957.234387 264.856203 922.540214 685.507706 510.525416 264.856203 98.509594Z"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-yinle1" viewBox="0 0 1026 1024">' + '' + '<path d="M1.024 225.32608l532.48 0 0 40.957952-532.48 0 0-40.957952Z"  ></path>' + '' + '<path d="M1.024 409.63584l532.48 0 0 40.957952-532.48 0 0-40.957952Z"  ></path>' + '' + '<path d="M1.024 593.944576l532.48 0 0 40.957952-532.48 0 0-40.957952Z"  ></path>' + '' + '<path d="M738.305024 249.8048 1025.024 286.763008C1025.024 81.975296 861.185024 41.017344 697.345024 0l0 30.138368 0 214.387712 0 533.72928c-24.51968 0-63.519744 0-126.200832 0-120.379392 0-160.519168 63.695872-160.519168 121.872384 0 49.3568 36.938752 123.87328 163.84 123.87328 181.440512 0 163.84-145.672192 163.84-245.74464L738.305024 249.8048z"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-yinle2" viewBox="0 0 1024 1024">' + '' + '<path d="M1.496251 226.863982l531.455354 0 0 40.879137-531.455354 0 0-40.879137Z"  ></path>' + '' + '<path d="M1.496251 410.818055l531.455354 0 0 40.879137-531.455354 0 0-40.879137Z"  ></path>' + '' + '<path d="M1.496251 594.772127l531.455354 0 0 40.879137-531.455354 0 0-40.879137Z"  ></path>' + '' + '<path d="M737.357511 251.294576l286.168268 36.88709C1023.525778 83.788025 860.001054 42.908888 696.47633 1.970473L696.47633 32.050846l0 213.975168 0 532.70223c-24.472497 0-63.397514 0-125.956963 0C450.370597 778.727222 410.308062 842.301547 410.308062 900.36611c0 49.261823 36.868693 123.63389 163.524724 123.63389 181.091368 0 163.524724-145.390854 163.524724-245.271756L737.357511 251.294576zM978.971423 241.215321 737.357511 210.077147 737.357511 54.784871C873.215896 91.572824 960.467579 131.971607 978.971423 241.215321zM666.533931 954.996654c-18.404708 18.663281-49.604203 28.125231-92.701144 28.125231-116.735191 0-122.643543-68.943046-122.643543-82.755775 0-51.319169 43.496555-80.760773 119.330124-80.760773L696.47633 819.605337l0 31.397769 0.100159 0C695.358229 892.181698 689.510176 931.72402 666.533931 954.996654z"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-quanping" viewBox="0 0 1024 1024">' + '' + '<path d="M895.310036 128.693034l0 320.416614-34.945907-0.077771L860.364129 188.417277l-261.260306 261.260306-24.628934-24.628934 262.023692-262.023692L574.974263 163.024957l-0.080841-34.331923L895.310036 128.693034zM425.798732 573.375859l-261.260306 261.260306 0-260.615623-34.945907-0.076748 0 320.41559 320.416614 0-0.080841-34.331923L188.403974 860.027461l262.023692-262.023692L425.798732 573.375859z"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-arrow2-up" viewBox="0 0 1024 1024">' + '' + '<path d="M942.936 747.245c29.315-28.497 29.315-74.739 0-103.307l-378.011-367.236c-29.367-28.483-76.982-28.483-106.291 0l-377.997 367.236c-29.367 28.562-29.367 74.806 0 103.307 29.325 28.546 76.929 28.546 106.304 0l324.841-315.6 324.803 315.599c29.367 28.545 76.973 28.544 106.356 0v0z"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-arrow2-down" viewBox="0 0 1024 1024">' + '' + '<path d="M81.066 276.755c-29.315 28.497-29.315 74.739 0 103.307l378.011 367.236c29.367 28.483 76.982 28.483 106.291 0l377.997-367.236c29.367-28.562 29.367-74.806 0-103.307-29.325-28.546-76.929-28.546-106.306 0l-324.841 315.6-324.803-315.599c-29.367-28.545-76.973-28.545-106.356 0v0z"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-arrow2-right" viewBox="0 0 1024 1024">' + '' + '<path d="M276.755 942.936c28.497 29.315 74.739 29.315 103.307 0l367.236-378.011c28.483-29.367 28.483-76.982 0-106.291l-367.236-377.997c-28.562-29.367-74.806-29.367-103.307 0-28.546 29.325-28.546 76.929 0 106.304l315.6 324.841-315.599 324.803c-28.545 29.367-28.544 76.973 0 106.356v0z"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-circulation" viewBox="0 0 1024 1024">' + '' + '<path d="M873.439 305.081c-55.271-55.271-128.756-85.71-206.919-85.71h-307.108v-58.746c0-18.762-12.896-25.785-28.656-15.605l-141.383 91.312c-15.76 10.177-15.606 26.591 0.342 36.471l140.7 87.165c15.95 9.881 28.997 2.614 28.997-16.147v-58.458h307.107c124.969 0 226.638 101.669 226.638 226.638 0 20.663-2.774 41.126-8.244 60.819-4.878 17.558 5.401 35.745 22.959 40.623 2.955 0.821 5.926 1.213 8.851 1.213 14.451 0 27.715-9.569 31.773-24.172 7.069-25.444 10.653-51.85 10.653-78.483 0.001-78.164-30.437-151.65-85.708-206.919zM818.958 751.197l-140.7-87.165c-15.95-9.881-28.997-2.614-28.997 16.147v58.458h-331.6c-124.967 0-226.638-101.668-226.638-226.638 0-43.791 12.502-86.275 36.153-122.86 9.894-15.303 5.508-35.73-9.794-45.622-15.305-9.895-35.73-5.508-45.623 9.795-30.569 47.282-46.726 102.156-46.726 158.687 0 78.163 30.439 151.649 85.709 206.919 55.271 55.269 128.756 85.709 206.919 85.709h331.599v58.746c0 18.762 12.896 25.785 28.656 15.605l141.385-91.311c15.759-10.177 15.606-26.591-0.342-36.471z"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-shuangxianyoujiantou" viewBox="0 0 1024 1024">' + '' + '<path d="M825.6 179.2 467.2 537.6c-12.8 12.8-25.6 12.8-38.4 0L422.4 531.2c-12.8-12.8-12.8-25.6 0-38.4l358.4-358.4c12.8-12.8 25.6-12.8 38.4 0l6.4 6.4C838.4 153.6 838.4 166.4 825.6 179.2z"  ></path>' + '' + '<path d="M467.2 486.4l358.4 358.4c12.8 12.8 12.8 25.6 0 38.4l-6.4 6.4c-12.8 12.8-25.6 12.8-38.4 0L422.4 531.2c-12.8-12.8-12.8-25.6 0-38.4l6.4-6.4C441.6 473.6 454.4 473.6 467.2 486.4z"  ></path>' + '' + '<path d="M627.2 179.2 268.8 537.6C256 550.4 243.2 550.4 230.4 537.6L224 531.2c-12.8-12.8-12.8-25.6 0-38.4l358.4-358.4c12.8-12.8 25.6-12.8 38.4 0l6.4 6.4C640 153.6 640 166.4 627.2 179.2z"  ></path>' + '' + '<path d="M268.8 486.4l358.4 358.4c12.8 12.8 12.8 25.6 0 38.4l-6.4 6.4c-12.8 12.8-25.6 12.8-38.4 0L224 531.2c-12.8-12.8-12.8-25.6 0-38.4l6.4-6.4C243.2 473.6 256 473.6 268.8 486.4z"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-shuangxianzuojiantou" viewBox="0 0 1024 1024">' + '' + '<path d="M224 844.8l358.4-358.4c12.8-12.8 25.6-12.8 38.4 0l6.4 6.4c12.8 12.8 12.8 25.6 0 38.4l-358.4 358.4c-12.8 12.8-25.6 12.8-38.4 0l-6.4-6.4C211.2 870.4 211.2 857.6 224 844.8z"  ></path>' + '' + '<path d="M582.4 537.6 224 179.2c-12.8-12.8-12.8-25.6 0-38.4l6.4-6.4c12.8-12.8 25.6-12.8 38.4 0l358.4 358.4c12.8 12.8 12.8 25.6 0 38.4L620.8 537.6C608 550.4 588.8 550.4 582.4 537.6z"  ></path>' + '' + '<path d="M422.4 844.8l358.4-358.4c12.8-12.8 25.6-12.8 38.4 0l6.4 6.4c12.8 12.8 12.8 25.6 0 38.4l-358.4 358.4c-12.8 12.8-25.6 12.8-38.4 0l-6.4-6.4C409.6 870.4 409.6 857.6 422.4 844.8z"  ></path>' + '' + '<path d="M780.8 537.6 422.4 179.2c-12.8-12.8-12.8-25.6 0-38.4l6.4-6.4c12.8-12.8 25.6-12.8 38.4 0l358.4 358.4c12.8 12.8 12.8 25.6 0 38.4l-6.4 6.4C806.4 550.4 793.6 550.4 780.8 537.6z"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-triangle-up" viewBox="0 0 1024 1024">' + '' + '<path d="M27.273 753.613l485.222-484.233 484.233 485.222z"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-sanjiao" viewBox="0 0 1024 1024">' + '' + '<path d="M966.432 285.488l-454.896 453.968-453.968-454.896z"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-shipin" viewBox="0 0 1024 1024">' + '' + '<path d="M841.58953 163.033144c-110.209054-0.048095-220.415039-0.01228-330.625116-0.01228s-220.418109-0.024559-330.625116 0.00614c-60.370972 0.01842-102.063537 39.495526-102.269221 99.403964-0.571005 165.839049-0.606821 331.684238 0.030699 497.526357 0.224104 58.765405 42.572608 99.134835 101.458763 99.158371 220.415039 0.088004 440.83417 0.075725 661.252279 0.00614 59.58098-0.01842 101.243869-41.525766 101.265358-100.754728 0.054235-164.782997 0.048095-329.565994 0.00307-494.347968C942.064896 204.030883 901.280004 163.060773 841.58953 163.033144zM890.584408 761.0144c-0.00614 21.615297-24.841781 46.63104-46.882773 46.63411-236.271168 0.039909-435.034071 0.039909-671.307286-0.00307-21.858844-0.00307-43.021839-19.673062-43.027979-41.450041-0.051165-180.647313-0.051165-325.941444 0-506.588757 0.00614-21.536502 28.29237-45.50438 50.282197-45.50745 118.136607-0.021489 212.302267-0.01228 330.439898-0.01228s218.585367-0.01228 336.721975 0.01228c21.828145 0.00614 43.771923 27.929096 43.778062 49.650817C890.635573 444.399369 890.638643 580.367087 890.584408 761.0144z"  ></path>' + '' + '<path d="M664.098093 491.700675c-40.187281-29.369911-80.519872-58.540278-120.777761-87.813998-36.405141-26.471908-109.432365-79.105662-109.432365-79.105662s-34.244942-10.009981-34.244942 22.061458c0 32.074509 0.081864 292.704458 0.081864 327.449797 0 34.748409 36.790928 21.036106 36.790928 21.036106s151.680585-110.196775 227.448222-165.399027C682.767292 516.233418 682.843016 505.403768 664.098093 491.700675zM609.594759 524.710486c-0.130983 0.097214-0.166799 0.169869-0.300852 0.267083-49.167816 35.883255-147.83193 107.198487-147.83193 107.198487l-1.648546 0.926092-25.786293 18.659989L434.027138 368.613312l195.634656 141.573389L609.594759 524.710486z"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-xiaoyinfu" viewBox="0 0 1024 1024">' + '' + '<path d="M831.245 298.318c-11.823 11.814-30.969 11.814-42.796 0l-147.615-145.366v575.33h-0.751c4.893 80.911-49.789 172.18-144.531 226.844-121.999 70.363-263.707 53.316-316.551-38.102-52.797-91.422 3.254-222.587 125.262-292.954 98.127-56.649 208.934-56.569 276.060-6.779v-523.873c0-16.544-2.283-31.077 6.7-39.104 12.452-11.108 30.963-11.805 42.769 0l201.424 201.275c11.823 11.79 11.823 30.923 0 42.741z"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-ego-heart" viewBox="0 0 1024 1024">' + '' + '<path d="M512 909.329l-11.312-7.069c-268.657-178.162-419.953-378.946-412.882-550.039 2.829-86.253 46.661-155.538 121.602-197.956 156.953-87.668 263.001 11.312 302.592 59.387 39.591-49.49 145.639-148.468 302.592-59.387v0c74.941 42.42 118.773 113.118 121.602 197.956 7.069 171.091-144.226 371.877-412.882 551.453l-11.312 5.655zM332.425 158.505c-29.694 0-65.043 8.484-103.22 29.694-62.215 35.349-98.979 93.323-101.806 165.437-2.829 73.527 29.694 270.069 383.188 509.033 354.909-238.963 386.017-435.506 383.188-509.033-2.829-70.7-38.177-130.086-101.806-165.437-168.263-93.323-261.585 62.215-264.415 69.285l-15.553 31.108-16.967-31.108c-4.242-4.242-60.801-98.979-162.608-98.979z"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-ego-heartfull" viewBox="0 0 1024 1024">' + '' + '<path d="M818.834 150.021c-196.543-110.29-306.834 82.010-306.834 82.010s-110.29-192.301-306.834-82.010-178.162 432.678 306.834 757.893c484.995-325.216 503.377-646.19 306.834-757.893z"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-asmkticon0229" viewBox="0 0 1024 1024">' + '' + '<path d="M512 128c-211.84 0-384 172.16-384 384s172.16 384 384 384 384-172.16 384-384S723.84 128 512 128zM512 857.6c-190.72 0-345.6-154.88-345.6-345.6s154.88-345.6 345.6-345.6 345.6 154.88 345.6 345.6S702.72 857.6 512 857.6z"  ></path>' + '' + '<path d="M654.72 489.6 454.4 374.4c-3.84-2.56-8.32-3.2-12.8-3.2-13.44 0-25.6 10.88-25.6 25.6l0 231.04c0 14.72 12.16 25.6 25.6 25.6 4.48 0 8.32-1.28 12.8-3.2l200.32-115.84C672 524.16 672 499.84 654.72 489.6zM454.4 605.44 454.4 418.56 616.32 512 454.4 605.44z"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-jiantou" viewBox="0 0 1024 1024">' + '' + '<path d="M292.38928 227.13202l381.365754 317.805136L673.755034 476.577233l-381.365754 317.805136c-18.877953 15.731286-21.428032 43.786249-5.696746 62.664202 15.731286 18.876929 43.785226 21.427008 62.663178 5.695722l381.365754-317.805136c21.347191-17.787108 21.347191-50.572816 0-68.359924l-381.365754-317.805136c-18.877953-15.731286-46.931892-13.180184-62.663178 5.695722C270.961248 183.345772 273.511327 211.400734 292.38928 227.13202L292.38928 227.13202z"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-angle-right-copy" viewBox="0 0 1024 1024">' + '' + '<path d="M671.807 927.804l-415.632-415.804 415.632-415.803 63.445 63.616-352.017 352.209 352.017 352.102z"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-angle-down" viewBox="0 0 1024 1024">' + '' + '<path d="M927.804 352.193l-415.804 415.632-415.803-415.632 63.616-63.445 352.209 352.017 352.102-352.017z"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-iconfontdanquxunhuan2eps" viewBox="0 0 1024 1024">' + '' + '<path d="M987.756 477.122c-11.646-113.361-80.128-215.937-180.243-270.32-17.846-9.727-40.938-0.545-47.227 18.805-8.758 26.607 14.848 38.042 33.236 49.791 39.959 25.541 73.284 61.333 95.849 102.999 47.227 87.073 44.668 195.637-6.739 280.256-50.758 83.442-143.173 135.593-240.82 135.593h-129.91c-28.853 0-43.806 36.114-23.398 56.539l91.253 91.253c30.238 30.238 76.931-16.778 46.793-46.799l-34.72-34.72h50.009c203.227-0.097 366.463-181.426 345.957-383.351-1.181-11.646 1.181 11.646 0 0v0zM641.685 230.946c20.723 0 45.616 7.584 59.508-12.817 13.898-20.305 0.545-49.044-24.043-51.602-21.475-2.25-51.062-7.691-64.115 14.637-12.602 21.695 3.636 49.79 28.63 49.79v0zM353.097 792.742c-147.341-15.075-259.847-146.921-252.478-294.675 7.476-147.77 133.445-267.108 281.201-267.108h129.91c28.853 0 43.803-36.219 23.398-56.539l-91.253-91.253c-30.137-30.137-77.036 16.656-46.799 46.799l34.72 34.72h-50.005c-208.769 0-373.847 190.817-344.367 397.243 14.63 102.252 75.755 194.461 164.117 247.989 43.906 26.607 93.593 43.283 144.66 48.501 42.518 4.176 49.461-61.333 6.839-65.708-9.404-0.972 18.157 1.914 0 0v0zM353.097 792.742z"  ></path>' + '' + '<path d="M607.379 649.879h-162.084v-30.869h63.353v-214.643l-64.961 18.817v-32.915l100.525-29.163v257.915h63.145v30.869zM607.379 649.879z"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-jiantoukongup" viewBox="0 0 1024 1024">' + '' + '<path d="M533.103 300.304c-0.973-0.486-1.824-1.338-2.797-1.703-17.758-8.514-39.651-5.717-53.882 9.365l-325.116 343.725c-17.758 18.731-16.907 48.287 1.824 66.045s48.287 16.907 66.045-1.824l291.79-308.453 296.047 307.236c17.881 18.609 47.436 19.096 66.045 1.216 9.487-9.122 14.351-21.407 14.352-33.57 0-11.676-4.378-23.353-13.137-32.353l-328.278-340.563c-0.608-0.608-1.581-0.851-2.189-1.581-0.487-0.487-0.851-0.973-1.338-1.581-2.797-2.797-6.203-4.135-9.365-5.959v0zM533.103 300.304z"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-wenjianjia" viewBox="0 0 1024 1024">' + '' + '<path d="M864 189.44l-213.312 0c-61.184 0-98.112-29.312-109.248-55.552C518.4 80 477.952 62.912 393.024 62.912L107.328 62.912C29.184 62.912 0 98.368 0 170.752L0 847.36c0 88.64 30.784 113.728 119.04 113.728L864 961.088c88.256 0 160-72.128 160-160.768L1024 350.208C1024 261.568 952.256 189.44 864 189.44L864 189.44 864 189.44zM983.424 800.32c0 53.184-66.496 125.888-119.424 125.888L119.04 926.208c-52.928 0-78.464-25.6-78.464-78.784L40.576 170.752C42.368 126.272 67.264 106.688 107.328 103.68l291.584 0c61.184 0 90.112 11.648 101.312 37.888 22.976 53.888 65.536 88.64 150.528 88.64l219.2 0c52.928 0 113.6 66.816 113.6 120L983.424 800.32 983.424 800.32 983.424 800.32zM694.528 554.496 533.184 554.496 533.184 392c0-18.304-2.944-33.344-20.864-33.344-17.92 0-20.864 15.04-20.864 33.344l0 162.432L329.472 554.432c-18.24 0-33.152 2.944-33.152 20.992 0 17.984 14.912 20.992 33.152 20.992l161.984 0 0 162.432c0 18.304 2.944 33.344 20.864 33.344 17.92 0 20.864-15.04 20.864-33.344L533.184 596.416l161.408 0c18.24 0 33.152-3.008 33.152-20.992C727.744 557.44 712.768 554.496 694.528 554.496L694.528 554.496 694.528 554.496zM937.792 85.12c0 11.904-9.6 21.568-21.44 21.568L615.744 106.688c-11.84 0-21.504-9.664-21.504-21.568l0 0c0-11.904 9.6-21.568 21.504-21.568l300.608 0C928.192 63.552 937.792 73.216 937.792 85.12L937.792 85.12 937.792 85.12z"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-suijibofangzhongzuo" viewBox="0 0 1024 1024">' + '' + '<path d="M53.952 384.384l249.344 0c9.152 0 25.152 6.848 29.76 11.456l43.456 43.456c16 16 41.152 16 57.216 0 16-16 16-41.152 0-57.216L390.272 338.624C369.664 318.016 333.056 302.016 303.296 302.016L53.952 302.016C31.104 302.016 12.8 320.32 12.8 343.168 12.8 366.08 31.104 384.384 53.952 384.384z"  ></path>' + '' + '<path d="M767.68 384.384l70.912 0 0 48.064c0 11.456 9.152 16 18.304 9.152l144.128-96.064c11.456-6.848 11.456-18.304 0-25.152l-144.128-96.064c-11.456-6.848-18.304-2.304-18.304 9.152l0 68.608-70.912 0c-61.76 0-141.824 34.304-185.28 77.76L376.512 590.208c-27.456 27.456-86.912 52.608-128.128 52.608L53.952 642.816c-22.848 0-41.152 18.304-41.152 41.152s18.304 38.912 41.152 38.912l194.432 0c61.76 0 141.824-34.304 185.28-77.76l205.888-210.432C667.008 409.536 726.528 384.384 767.68 384.384z"  ></path>' + '' + '<path d="M856.896 567.36c-11.456-6.848-18.304-2.304-18.304 9.152l0 64.064L705.92 640.576c-6.848 0-22.848-6.848-29.76-11.456L632.704 585.664c-16-16-41.152-16-57.216 0s-16 41.152 0 57.216l43.456 43.456c20.608 20.608 57.216 36.608 84.608 36.608l132.672 0 0 52.608c0 11.456 9.152 16 18.304 9.152l144.128-96.064c11.456-6.848 11.456-18.304 0-25.152L856.896 567.36z"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-shanchu" viewBox="0 0 1024 1024">' + '' + '<path d="M907.952704 213.968321 116.049614 213.968321c-14.124424 0-25.543282-11.418658-25.543282-25.543282 0-14.103838 11.418658-25.548678 25.543282-25.548678L907.952904 162.876362c14.125423 0 25.543082 11.44484 25.543082 25.548678C933.495986 202.549663 922.078327 213.968321 907.952704 213.968321L907.952704 213.968321zM652.496903 111.789998 371.504216 111.789998c-14.125623 0-25.548678-11.418658-25.548678-25.548678 0-14.098441 11.423055-25.544281 25.548678-25.544281l280.992687 0c14.131019 0 25.549677 11.446839 25.549677 25.544281C678.04658 100.37234 666.628922 111.789998 652.496903 111.789998L652.496903 111.789998zM397.047498 775.958892 397.047498 341.695123c0-14.102838 11.417659-25.548678 25.543082-25.548678 14.131019 0 25.548678 11.44584 25.548678 25.548678L448.139258 775.958892c0 14.12982-11.417659 25.548678-25.548678 25.548678C408.466156 801.50737 397.047498 790.089711 397.047498 775.958892L397.047498 775.958892zM575.862861 775.958892 575.862861 341.695123c0-14.102838 11.422056-25.548678 25.548678-25.548678 14.125623 0 25.543082 11.44584 25.543082 25.548678L626.954621 775.958892c0 14.12982-11.417659 25.548678-25.543082 25.548678C587.284917 801.50737 575.862861 790.089711 575.862861 775.958892L575.862861 775.958892zM218.233134 290.603363c14.126622 0 25.544281 11.446839 25.544281 25.543082l0 30.246293 0 97.481707 0 408.719288c0 28.202279 22.89048 51.094158 51.09176 51.094158l434.263769 0c28.20128 0 51.09176-22.891679 51.09176-51.094158L780.224704 443.874445l0-97.481707 0-30.246293c0-14.097442 11.417659-25.543082 25.544281-25.543082 14.12982 0 25.548678 11.446839 25.548678 25.543082l0 102.185918 0 25.542082L831.317663 878.143611c0 42.327902-34.309338 76.63724-76.636041 76.63724l-485.360925 0c-42.326702 0-76.636041-34.309338-76.636041-76.63724L192.684656 490.751463l0-46.877017 0-25.542082 0-102.185718C192.684656 302.050202 204.107711 290.603363 218.233134 290.603363L218.233134 290.603363z"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-swticonyinle2" viewBox="0 0 1026 1024">' + '' + '<path d="M1.024 225.32608l532.48 0 0 40.957952-532.48 0 0-40.957952ZM1.024 409.63584l532.48 0 0 40.957952-532.48 0 0-40.957952ZM1.024 593.944576l532.48 0 0 40.957952-532.48 0 0-40.957952ZM738.305024 249.8048 1025.024 286.763008C1025.024 81.975296 861.185024 41.017344 697.345024 0l0 30.138368 0 214.387712 0 533.72928c-24.51968 0-63.519744 0-126.200832 0-120.379392 0-160.519168 63.695872-160.519168 121.872384 0 49.3568 36.938752 123.87328 163.84 123.87328 181.440512 0 163.84-145.672192 163.84-245.74464L738.305024 249.8048z"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-fangkuang" viewBox="0 0 1024 1024">' + '' + '<path d="M805.883819 65.269539 219.453642 65.269539c-85.741803 0-155.464771 68.424392-155.464771 152.530952l0 597.543282c0 84.050278 69.722968 152.473647 155.464771 152.473647l586.4312 0c85.683475 0 155.462724-68.423369 155.462724-152.473647L961.347566 217.800491C961.346543 133.693932 891.568317 65.269539 805.883819 65.269539zM895.178541 815.286468c0 47.554062-40.049135 86.306668-89.294722 86.306668L219.453642 901.593136c-49.300846 0-89.352027-38.695301-89.352027-86.306668L130.101615 217.743186c0-47.608298 40.050158-86.361927 89.352027-86.361927l0 0.056282 586.4312 0c49.245587 0 89.294722 38.753629 89.294722 86.36295L895.179564 815.286468z"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-jian" viewBox="0 0 1024 1024">' + '' + '<path d="M56.651 454.798h915.227v76.269h-915.227v-76.269z"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-bofangqibofang" viewBox="0 0 1024 1024">' + '' + '<path d="M927.99792 511.99744c0 35.199824-20.351898 65.91967-50.623747 82.623587l0 0-624.700876 415.357923c-0.255999 0.191999-0.575997 0.319998-0.831996 0.447998l-0.383998 0.255999 0 0C236.09738 1019.130904 218.177469 1023.99488 199.041565 1023.99488c-56.895716 0-103.039485-43.007785-103.039485-95.99952l0 0 0-831.99584 0 0C96.00208 43.007785 142.145849 0 199.041565 0c19.135904 0 37.055815 4.863976 52.415738 13.375933l0 0 0.383998 0.191999c0.255999 0.191999 0.511997 0.319998 0.831996 0.447998l624.700876 415.357923 0 0C907.646022 446.07777 927.99792 476.797616 927.99792 511.99744z"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-youjiantou-copy-copy" viewBox="0 0 1024 1024">' + '' + '<path d="M591.552 1019.072l-536.832-506.112 536.768-508.096 33.024 34.879-499.904 473.151 499.84 471.296z"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-weixuan" viewBox="0 0 1024 1024">' + '' + '<path d="M512 1024C229.239467 1024 0 794.760533 0 512 0 229.239467 229.239467 0 512 0c282.760533 0 512 229.239467 512 512 0 282.760533-229.239467 512-512 512z m0-955.733333C266.922667 68.266667 68.266667 266.922667 68.266667 512s198.656 443.733333 443.733333 443.733333 443.733333-198.656 443.733333-443.733333S757.077333 68.266667 512 68.266667z" fill="" ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-xuanzhong" viewBox="0 0 1024 1024">' + '' + '<path d="M512 1024C229.239467 1024 0 794.760533 0 512 0 229.239467 229.239467 0 512 0c282.760533 0 512 229.239467 512 512 0 282.760533-229.239467 512-512 512z m325.870933-700.142933a49.595733 49.595733 0 0 0-74.274133 0L433.152 681.813333l-172.9536-187.357866a49.732267 49.732267 0 0 0-74.24 0 60.416 60.416 0 0 0 0 80.4864l210.056533 227.566933a50.517333 50.517333 0 0 0 37.137067 16.622933c13.4144 0 26.862933-5.563733 37.137067-16.622933l367.581866-398.267733c20.48-22.186667 20.48-58.197333 0-80.384z" fill="" ></path>' + '' + '</symbol>' + '' + '</svg>';
+	  var svgSprite = '<svg>' + '' + '<symbol id="icon-chuangkoufangda" viewBox="0 0 1024 1024">' + '' + '<path d="M341.4682 569.1464H173.47993599999998c-61.7656 0-111.9918 50.2272-111.9918 111.9928v167.9872c0 61.7667 50.2262 111.9939 111.9918 111.9939h167.989248c61.738 0 111.9928-50.2272 111.9928-111.9939v-167.9872C453.461 619.3736 403.2061 569.1464 341.4682 569.1464zM397.4636 849.1264c0 30.8705-25.1269 55.9964-55.9954 55.9964H173.47993599999998c-30.8961 0-55.9954-25.1249-55.9954-55.9964v-167.9872c0-30.8695 25.0993-55.9985 55.9954-55.9985h167.989248c30.8685 0 55.9954 25.1279 55.9954 55.9985V849.1264zM529.2524 532.9459 761.4392 300.759v184.392704c0 15.4757 12.5225 27.9992 27.9982 27.9992 15.4481 0 27.9982-12.5235 27.9982-27.9992V233.16889600000002c0-15.4747-12.5501-27.9972-27.9982-27.9972H537.4545919999999c-15.4757 0-27.9982 12.5225-27.9982 27.9972 0 15.4757 12.5225 27.9982 27.9982 27.9982h184.392704L489.6604 493.355c-10.9363 10.9363-10.9363 28.6536 0 39.5909 5.4692 5.4682 12.6321 8.2022 19.796 8.2022C516.6193 541.1482 523.7832 538.4141 529.2524 532.9459zM845.4328 65.1817H173.47993599999998c-61.7656 0-111.9918 50.2272-111.9918 111.9928v307.97823999999997c0 15.4757 12.5225 27.9992 27.9982 27.9992 15.4481 0 27.9982-12.5235 27.9982-27.9992v-307.97823999999997c0-30.8695 25.0993-55.9964 55.9954-55.9964h671.952896c30.8695 0 55.9974 25.1279 55.9974 55.9964v671.952896c0 30.8705-25.1279 55.9964-55.9974 55.9964h-307.97823999999997c-15.4757 0-27.9982 12.5235-27.9982 27.9982 0 15.4767 12.5225 28.0003 27.9982 28.0003h307.97823999999997c61.738 0 111.9928-50.2272 111.9928-111.9939V177.17350399999998C957.4257 115.4079 907.1708 65.1817 845.4328 65.1817z"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-bofang" viewBox="0 0 1024 1024">' + '' + '<path d="M508 140.0064c-206.2272 0-373.3888 167.168-373.3888 373.3888 0 206.2272 167.1616 373.3888 373.3888 373.3888s373.3888-167.1616 373.3888-373.3888C881.3888 307.1808 714.2272 140.0064 508 140.0064zM508 818.8992c-168.7232 0-305.4976-136.7744-305.4976-305.4976 0-168.7232 136.7744-305.504 305.4976-305.504s305.4976 136.7808 305.4976 305.504C813.4976 682.1248 676.7232 818.8992 508 818.8992zM406.1696 666.1504l288.5312-169.7216L406.1696 360.6464V666.1504z"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-yinliangjingyin" viewBox="0 0 1024 1024">' + '' + '<path d="M576 896 256 704 256 320 576 128Z"  ></path>' + '' + '<path d="M0 320l256 0 0 384-256 0 0-384Z"  ></path>' + '' + '<path d="M958.4 398.848 913.152 353.6 800 466.688 686.848 353.6 641.6 398.848 754.752 512 641.6 625.152 686.848 670.4 800 557.248 913.152 670.4 958.4 625.152 845.248 512Z"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-yinliangzhong" viewBox="0 0 1024 1024">' + '' + '<path d="M719.52 831.52c-12.288 0-24.576-4.672-33.952-14.048-18.752-18.752-18.752-49.12 0-67.872 131.008-131.008 131.008-344.16 0-475.168-18.752-18.752-18.752-49.152 0-67.872 18.752-18.752 49.152-18.752 67.872 0 81.6 81.6 126.528 190.08 126.528 305.472 0 115.392-44.928 223.872-126.528 305.472-9.376 9.376-21.664 14.048-33.952 14.048zM549.024 741.024c-12.288 0-24.576-4.672-33.952-14.048-18.752-18.752-18.752-49.12 0-67.872 81.088-81.088 81.088-213.056 0-294.144-18.752-18.752-18.752-49.152 0-67.872 18.752-18.752 49.12-18.752 67.872 0 118.528 118.528 118.528 311.392 0 429.92-9.376 9.376-21.664 14.048-33.952 14.048zM401.344 78.656c25.664-25.664 46.656-16.96 46.656 19.328l0 828c0 36.288-20.992 44.992-46.656 19.328l-241.344-241.344-160 0 0-384 160 0 241.344-241.344z"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-ttpodicon" viewBox="0 0 1024 1024">' + '' + '<path d="M815.045407 826.541813c-18.198218-20.869307-76.860685-88.349187-110.542175-127.250172l68.990106 0L773.493338 185.452759l84.138744 0 0 513.839905 67.838838 0C892.265287 737.579665 834.40001 804.258297 815.045407 826.541813z"  ></path>' + '' + '<path d="M64.491463 689.618327l483.5468 0 0 58.014298-483.5468 0 0-58.014298Z"  ></path>' + '' + '<path d="M64.491463 456.056873l576.145571 0 0 58.014298-576.145571 0 0-58.014298Z"  ></path>' + '' + '<path d="M64.491463 222.490304l576.145571 0 0 58.014298-576.145571 0 0-58.014298Z"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-ttpodicon1" viewBox="0 0 1024 1024">' + '' + '<path d="M682.871669 633.987309c0 57.20691 46.984081 103.750969 104.732319 103.750969 57.747215 0 104.732319-46.544059 104.732319-103.750969L892.336308 522.256598c0-57.20691-46.985104-103.749946-104.732319-103.749946-57.748239 0-104.732319 46.543036-104.732319 103.749946L682.871669 633.987309zM731.209584 522.256598c0-30.800493 25.301246-55.865355 56.393381-55.865355 31.093159 0 56.393381 25.064862 56.393381 55.865355l0 111.729687c0 30.800493-25.301246 55.866379-56.393381 55.866379-31.093159 0-56.393381-25.065885-56.393381-55.866379L731.209584 522.256598z"  ></path>' + '' + '<path d="M956.786179 633.987309c0-13.217023-10.819416-23.941272-24.170492-23.941272-13.351076 0-24.168446 10.725272-24.168446 23.941272 0 66.011436-54.208623 119.710452-120.844276 119.710452-66.6377 0-120.845299-53.699016-120.845299-119.710452 0-13.217023-10.819416-23.941272-24.169469-23.941272-13.351076 0-24.168446 10.725272-24.168446 23.941272 0 84.268242 63.164598 154.00349 145.012721 165.683507l0 65.759703-56.393381 0c-13.351076 0-24.168446 10.725272-24.168446 23.943318 0 13.217023 10.81737 23.941272 24.168446 23.941272L868.166839 913.315108c13.351076 0 24.168446-10.725272 24.168446-23.941272 0-13.218046-10.81737-23.943318-24.168446-23.943318l-56.395428 0 0-65.759703C893.621581 787.989775 956.786179 718.254527 956.786179 633.987309z"  ></path>' + '' + '<path d="M634.532731 522.256598c0-12.801561 1.918699-25.145703 5.282307-36.894282-11.154038-3.163039-22.61916-5.940292-34.361599-8.351202 51.614541-36.162618 85.472674-95.626941 85.472674-162.878624 0-110.014626-90.350774-199.519126-201.408149-199.519126s-201.408149 89.5045-201.408149 199.519126c0 69.347414 35.939537 130.481773 90.293469 166.251442C196.677405 528.959254 62.533218 693.586708 62.533218 888.747573c0 13.220093 10.81737 23.941272 24.168446 23.941272 13.351076 0 24.169469-10.721179 24.169469-23.941272 0-206.829626 169.858596-375.095957 378.646829-375.095957 53.881165 0 102.084003 6.859221 145.014768 19.569708L634.532731 522.256598zM489.517963 465.767026c-84.402295 0-153.070234-68.022233-153.070234-151.634536 0-83.610256 68.667939-151.634536 153.070234-151.634536 84.404342 0 153.070234 68.02428 153.070234 151.634536C642.589221 397.74377 573.922305 465.767026 489.517963 465.767026z"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-sousuo" viewBox="0 0 1024 1024">' + '' + '<path d="M125.872291 465.670835c0-189.738365 153.796782-343.535147 343.535147-343.535147 189.738365 0 343.535147 153.797805 343.535147 343.535147 0 189.737342-153.796782 343.535147-343.535147 343.535147C279.669072 809.205982 125.872291 655.408177 125.872291 465.670835zM722.799542 779.406283l182.254927 182.204785 52.816926-52.832276L776.346085 727.201294c60.066027-70.406536 96.341209-161.732521 96.341209-261.530458 0-222.731804-180.549076-403.28088-403.28088-403.28088S66.126558 242.939031 66.126558 465.670835c0 222.730781 180.549076 403.289066 403.28088 403.289066C565.398676 868.958878 653.558551 835.409784 722.799542 779.406283z"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-iconfontclosesmall" viewBox="0 0 1024 1024">' + '' + '<path d="M596.722 511.999 924.94 183.781c23.299-23.299 23.299-61.422 0-84.721s-61.422-23.299-84.721 0L512.001 427.278 183.781 99.06c-23.299-23.299-61.422-23.299-84.721 0s-23.299 61.422 0 84.721L427.28 511.999 99.06 840.219c-23.299 23.299-23.299 61.422 0 84.721s61.422 23.299 84.721 0l328.219-328.219L840.219 924.94c23.299 23.299 61.422 23.299 84.721 0s23.299-61.422 0-84.721L596.722 511.999z"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-icsuoxiaotubiao" viewBox="0 0 1024 1024">' + '' + '<path d="M924.906969 82.6017l-812.23796 0c-16.018493 0-29.008499 12.987105-29.008499 29.008499l0 406.11898 58.016997 0 0-377.110482 754.220963 0 0 754.220963-377.110482 0 0 58.016997 406.11898 0c16.018493 0 29.008499-12.987105 29.008499-29.008499l0-812.23796C953.915467 95.588805 940.925462 82.6017 924.906969 82.6017zM83.66051 952.853756l348.101983 0 0-348.101983-348.101983 0L83.66051 952.853756zM141.677507 662.768771l232.067989 0 0 232.067989-232.067989 0L141.677507 662.768771zM489.77949 285.66119l0 261.076487 261.076487 0 0-58.016997-162.032771 0 269.573076-269.573076-41.02672-41.02672-269.573076 269.573076L547.796487 285.66119 489.77949 285.66119z"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-yunduan" viewBox="0 0 1024 1024">' + '' + '<path d="M917.954779 425.097768c-40.84015-40.84015-93.963045-64.927755-151.037948-68.834738-26.361391-46.957475-64.293305-86.594217-110.209054-115.03292-50.133817-31.051203-107.949594-47.464011-167.195953-47.464011-76.903507 0-151.125953 27.823696-208.991872 78.346369-52.831252 46.125527-88.848561 108.227933-102.630449 176.357614-82.845847 23.356964-141.253094 99.278097-141.253094 186.927343 0 51.435463 19.905352 99.910501 56.04955 136.49779 30.118971 30.487362 68.625984 49.808406 110.369713 55.769165l0 1.984191L750.384295 829.64857c63.299675 0 122.81107-24.650423 167.570483-69.409836s69.409836-104.270808 69.409836-167.570483S962.714192 469.857181 917.954779 425.097768zM750.384295 778.48326 231.015468 778.48326l-2.044566-0.026606c-37.815257-0.494257-73.28919-15.595186-99.887988-42.520419-26.622334-26.947745-41.283242-62.653969-41.283242-100.538811 0-69.068052 49.213865-128.245849 117.019157-140.712789l18.066471-3.321652 2.62785-18.180058c9.079796-62.821791 40.564881-120.541377 88.656179-162.528654 48.543599-42.382273 110.814852-65.723887 175.34147-65.723887 49.719378 0 98.219999 13.761422 140.255371 39.797401 31.191396 19.317974 57.987692 44.790112 78.805834 74.68498-23.131837 4.139274-45.606711 11.68104-66.428945 22.387893-32.121582 16.518209-60.511165 40.609906-82.098833 69.670779-8.42488 11.341303-6.062066 27.366278 5.28026 35.792181 11.341303 8.425903 27.365254 6.062066 35.792181-5.28026 16.947997-22.812565 39.225373-41.721217 64.425312-54.680367 26.38902-13.570063 54.934147-20.450774 84.84334-20.450774 102.458533 0 185.815009 83.356476 185.815009 185.815009S852.842829 778.48326 750.384295 778.48326z"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-xiazai" viewBox="0 0 1024 1024">' + '' + '<path d="M915.972635 490.681462c-14.129812 0-25.582655 11.453866-25.582655 25.582655l0 364.297007c0 8.463766-6.885827 15.349593-15.349593 15.349593l-736.780463 0c-8.463766 0-15.349593-6.885827-15.349593-15.349593l0-364.297007c0-14.128789-11.453866-25.582655-25.582655-25.582655s-25.582655 11.453866-25.582655 25.582655l0 364.297007c0 36.676317 29.838585 66.514903 66.514903 66.514903l736.780463 0c36.676317 0 66.514903-29.838585 66.514903-66.514903l0-364.297007C941.55529 502.135328 930.102447 490.681462 915.972635 490.681462z"  ></path>' + '' + '<path d="M488.561172 775.854387c4.995781 4.995781 11.541871 7.492648 18.090007 7.492648s13.094226-2.496867 18.090007-7.492648l241.500263-241.500263c9.990538-9.990538 9.990538-26.188452 0-36.178991-9.991562-9.990538-26.188452-9.990538-36.178991 0L532.23281 696.002734 532.23281 102.848413c0-14.128789-11.453866-25.582655-25.582655-25.582655-14.128789 0-25.582655 11.453866-25.582655 25.582655l0 593.154321L283.239899 498.17411c-9.991562-9.990538-26.188452-9.990538-36.178991 0-9.990538 9.990538-9.990538 26.188452 0 36.178991L488.561172 775.854387z"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-msnui-zoom-finger" viewBox="0 0 1031 1024">' + //缩小
+	  '' + '<path d="M450.785 532.909q22.672-2.519 31.909 6.717t7.558 31.070q-1.68 22.673-5.038 51.222t-7.137 58.359-7.137 59.199-5.878 54.581q-2.519 26.871-15.114 34.009t-27.711-8.817q-9.236-9.236-23.512-22.673t-24.352-22.673q-10.916-10.916-20.153-7.558t-20.993 15.114q-12.595 12.595-33.168 33.588t-42.826 43.665-43.245 44.085-34.428 34.009q-5.038 5.878-12.175 10.916t-15.114 7.137-16.794-0.42-18.893-12.595q-5.878-5.878-9.656-9.236t-7.137-6.717l-18.473-18.473q-18.473-18.473-14.695-31.909t22.252-32.749q8.397-8.397 27.711-27.291t40.726-40.726 41.565-42.406 31.909-32.329q16.794-16.794 22.673-28.97t-5.878-23.932q-8.397-8.397-20.993-22.252t-21.832-23.093q-15.114-15.114-11.336-27.291t27.291-14.695 52.901-6.298 60.459-7.137 61.298-7.137 55.421-6.298zM951.252 108.855q18.473 18.473 16.374 33.168t-21.412 34.009q-9.236 9.236-28.131 28.551t-41.146 41.565-42.826 43.245-32.329 32.749q-16.794 16.794-20.572 26.871t7.977 21.832q8.397 8.397 19.733 20.572t20.573 21.412q15.114 15.114 10.916 27.291t-26.871 14.695q-23.512 2.519-52.901 6.298t-60.879 7.137-61.718 7.137-54.581 6.298q-43.665 5.038-40.306-36.948 2.519-22.672 5.458-51.222t6.717-58.779 7.137-59.619 5.878-54.581q2.519-26.871 15.114-34.009t28.551 8.817q4.198 5.038 10.916 11.336t13.855 13.015 13.855 13.015 11.756 11.336q10.916 10.916 17.633 9.656t18.473-13.015q12.595-12.595 33.589-34.009t44.085-44.504 44.504-44.924 34.848-35.268q5.038-5.038 11.756-10.497t14.275-7.977 15.954-0.839 18.473 11.756q5.878 5.878 9.656 9.236t7.137 6.717l7.558 7.558z"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-yifu" viewBox="0 0 1024 1024">' + '' + '<path d="M965.911 310.531476 791.510972 136.133493c-13.022595-13.020548-30.9325-19.649526-49.380664-18.228153-1.740644-0.150426-3.421936-0.224104-5.070482-0.224104l-92.914156 0-6.516414 3.624551c-34.420951 19.146059-78.341253 29.689183-123.668601 29.689183s-89.245603-10.543124-123.666554-29.689183L383.776663 117.680213l-92.916203 0c-23.691585 0-44.986587 12.924357-55.995315 33.450856L62.476937 323.520301C50.576909 335.419306 44.023656 351.240643 44.023656 368.068913s6.553253 32.648584 18.452257 44.548612l125.95262 125.954667c10.540054 10.538007 24.157189 16.878412 38.826284 18.181081l0 304.398802c0 35.07382 28.532847 63.606667 63.60462 63.606667l446.199365 0c35.07382 0 63.606667-28.532847 63.606667-63.606667L800.665469 543.807427c14.843056-1.210571 28.638247-7.576559 39.287795-18.223037l125.956713-125.956713C990.474442 375.064234 990.474442 335.094918 965.911 310.531476zM925.254022 358.974791 799.297308 484.931504c-1.315972 1.318018-2.818185 1.593288-3.845585 1.593288-1.003863 0-2.477424-0.260943-3.796466-1.50733l-48.482201-45.769416 0 421.904029c0 3.371794-2.740414 6.113231-6.113231 6.113231L290.860461 867.265306c-3.368724 0-6.111185-2.740414-6.111185-6.113231L284.749276 454.265064l-48.103578 43.809785c-1.303692 1.186012-2.742461 1.435699-3.719718 1.435699-1.026376 0-2.526543-0.275269-3.842515-1.591241L103.129822 371.963617c-1.331321-1.333368-1.612731-2.855024-1.612731-3.894703s0.280386-2.561335 1.612731-3.894703l174.021405-174.019359 5.560646-4.989641 2.491751-6.155187c0.716314-1.768273 2.62785-3.835352 5.658883-3.835352l78.233805 0c42.079374 21.817911 91.979878 33.313733 144.865365 33.313733s102.789061-11.495822 144.867412-33.313733l78.196966 0c0.309038 0.00921 0.613984 0.059352 0.915859 0.103354l4.105504 0.589424 4.105504-0.594541c1.308809-0.184195 3.042289-0.144286 4.702092 1.514493L925.254022 351.184361C927.401941 353.332281 927.401941 356.826871 925.254022 358.974791z"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-iconfontshezhi" viewBox="0 0 1024 1024">' + '' + '<path d="M511.605515 331.923692c-98.876961 0-179.283246 80.407308-179.283246 179.283246 0 98.877985 80.406285 179.283246 179.283246 179.283246 98.877985 0 179.283246-80.405261 179.283246-179.283246C690.888761 412.331 610.4835 331.923692 511.605515 331.923692zM511.605515 645.669372c-74.256214 0-134.462434-60.183707-134.462434-134.462434 0-74.277704 60.205197-134.461411 134.462434-134.461411S646.06795 436.928211 646.06795 511.206938C646.06795 585.485665 585.862753 645.669372 511.605515 645.669372zM959.81363 600.848561l0-179.283246-129.975237-21.51399c-3.591805-12.102642-8.53642-24.203238-14.794961-35.409464l77.078493-107.128903L765.276982 130.668015l-107.10639 77.103052c-11.20418-6.2831-23.306822-11.206226-35.410488-14.794961L601.248162 62.998823l-179.283246 0-21.512966 129.97626c-12.56313 3.589758-24.205285 8.973372-35.848463 14.794961l-106.23044-75.746148L131.526057 258.412444l76.204589 106.23044c-5.821589 11.206226-10.767228 23.306822-14.356986 35.409464L63.397401 421.566338l0 179.283246 129.97626 21.511943c4.02671 12.540617 8.973372 25.102724 15.231913 36.745902l-76.182077 106.23044 126.845966 126.845966 106.668415-76.641541c11.205203 5.383614 22.410406 10.307763 34.513048 13.896498l21.512966 129.97626 179.283246 0 21.511943-129.97626c12.562107-4.048199 24.64326-8.973372 36.307927-15.253402l107.127879 77.101006 126.845966-126.845966-77.101006-107.564831c5.361101-11.205203 10.305717-22.410406 13.897521-34.514071L959.81363 600.848561zM786.854417 609.624435c-2.886747 9.739828-7.133468 19.149129-11.335163 27.838022-7.090489 14.750959-5.558599 32.237215 3.983731 45.543266l54.9321 76.641541-73.008804 73.008804-76.1831-54.843072c-7.768941-5.603625-16.938788-8.448416-26.173103-8.448416-7.311523 0-14.598486 1.794879-21.252023 5.384637-8.643867 4.617158-18.055215 8.555863-28.756951 12.013615-16.018835 5.164626-27.750017 18.778692-30.55183 35.366486l-15.275915 92.464925L459.978694 914.594241l-15.275915-92.464925c-2.844791-16.938788-15.078417-30.792307-31.514761-35.671431-9.738805-2.867304-19.149129-7.135514-27.882024-11.337209-6.15007-2.910283-12.781094-4.39817-19.368116-4.39817-9.235338 0-18.361183 2.867304-26.131147 8.425903l-75.788104 54.406121-73.007781-73.009827 54.05615-75.30715c9.93528-13.875009 11.161201-32.301683 2.998287-47.359634-4.399193-8.206916-8.338922-17.748223-12.014638-29.237905-5.164626-15.998369-18.777669-27.728528-35.366486-30.506804l-92.464925-15.298428L108.219235 459.579093l92.464925-15.296381c16.938788-2.824325 30.792307-15.057951 35.672454-31.493272 2.735297-9.191336 6.544043-18.689664 11.118222-27.489074 7.79043-14.9679 6.500041-33.067116-3.326768-46.789653l-54.012148-75.263148 73.030293-72.725348 75.394131 53.729715c7.746428 5.513574 16.851806 8.337899 26.043143 8.337899 6.850012 0 13.700023-1.575892 20.025079-4.750187 9.104355-4.530177 18.777669-9.103332 28.145014-11.751648 16.632819-4.793166 29.04143-18.689664 31.930223-35.804461l15.275915-92.464925 103.253642 0 15.275915 92.464925c2.844791 16.938788 15.07944 30.792307 31.514761 35.673477 9.323343 2.7793 18.427698 6.544043 26.26213 10.942213 6.828522 3.807722 14.356986 5.690606 21.88545 5.690606 9.235338 0 18.383696-2.824325 26.175149-8.425903l76.204589-54.866608 72.964802 72.964802-54.865585 76.203566c-10.17678 14.116509-11.205203 32.850176-2.736321 48.104601 4.400217 7.79043 8.163937 16.85283 10.94119 26.219151 4.882194 16.435321 18.735713 28.668946 35.673477 31.493272l92.464925 15.296381 0 103.254665-92.464925 15.298428C805.589107 580.954465 791.735587 593.189114 786.854417 609.624435z"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-set" viewBox="0 0 1024 1024">' + '' + '<path d="M661.635507 917.742954l-0.005117 0c-16.273638-0.008186-32.097022-6.733355-42.312688-18.008142-13.921058-15.263635-58.030671-54.954613-94.13496-54.954613-35.856649 0-80.649831 39.921221-93.514837 53.901631-10.19213 11.084453-25.903973 17.700127-42.020022 17.700127-7.680936 0-14.922874-1.469468-21.540595-4.377704l-1.158383-0.503467-109.745497-61.373813-1.092891-0.76134c-19.97596-13.986549-27.579125-41.342594-17.679661-63.633273 0.076748-0.167822 10.123568-23.351847 10.123568-44.490284 0-64.145949-52.189639-116.336612-116.335588-116.336612l-3.889587 0c-0.240477 0.008186-0.478907 0.013303-0.704035 0.013303-18.378579 0-33.337269-16.322757-38.123272-41.587164-0.378623-2.025123-9.359158-49.937342-9.359158-87.687108 0-37.753859 8.977465-85.671195 9.359158-87.695295 4.840238-25.582655 20.125363-42.014906 38.82833-41.574884l3.889587 0c64.145949 0 116.335588-52.189639 116.335588-116.332519 0-21.132296-10.041704-44.311205-10.148128-44.543496-9.889231-22.26612-2.234901-49.619094 17.832134-63.560618l1.136893-0.787946 115.818819-63.620993 1.206478-0.511653c6.5246-2.780323 13.665231-4.189416 21.23258-4.189416 16.08535 0 31.823799 6.472412 42.114167 17.315364 13.70821 14.350846 57.036018 51.681056 92.107791 51.681056 34.744315 0 77.809133-36.59036 91.471294-50.692542 10.232039-10.619872 25.859971-16.98279 41.781592-16.98279 7.720845 0 14.995529 1.460258 21.627577 4.340865l1.170662 0.511653 111.865787 62.147432 1.104147 0.774643c20.016893 13.96506 27.638477 41.323151 17.730826 63.625086-0.071631 0.169869-10.123568 23.354917-10.123568 44.49233 0 64.142879 52.189639 116.332519 116.333542 116.332519l3.895727 0c18.673292-0.416486 33.979906 15.989159 38.822191 41.574884 0.38067 2.0241 9.359158 49.936319 9.359158 87.688131 0 37.754882-8.978489 85.670172-9.366322 87.693248-4.837168 25.584702-20.143783 41.955554-38.824237 41.573861l-3.886517 0c-64.143902 0-116.333542 52.190663-116.333542 116.336612 0 21.128203 10.041704 44.304042 10.144034 44.534286 9.882068 22.25691 2.243087 49.613978-17.785062 63.566758l-1.119497 0.785899-113.756857 62.872956-1.182942 0.5137C676.272879 916.317489 669.162948 917.742954 661.635507 917.742954L661.635507 917.742954zM658.180825 864.149339c0.506537 0.331551 1.946328 0.895393 3.454682 0.895393 0.062422 0 0.118704 0 0.170892-0.004093l106.279558-58.739822c-2.566452-5.956665-14.294564-34.884508-14.294564-65.050552 0-90.231047 71.064522-164.1772 160.166863-168.801521 1.280156-7.081279 8.241708-46.917566 8.241708-76.801177 0-29.882588-6.961552-69.700455-8.241708-76.8022-89.100294-4.627391-160.166863-78.573543-160.166863-168.799474 0-30.214139 11.764951-59.175751 14.307867-65.090461l-104.555288-58.089c-0.119727-0.005117-0.268106-0.016373-0.438998-0.016373-1.780553 0-3.443425 0.650823-3.996011 1.023306-1.75804 1.804089-16.909112 17.173125-38.681998 32.485879-32.225959 22.669302-62.696947 34.167171-90.574878 34.167171-28.141944 0-58.859549-11.724019-91.292216-34.839483-21.905916-15.609513-37.131689-31.275307-38.890752-33.112142-0.555655-0.376577-2.24411-1.045819-4.03899-1.045819-0.140193 0-0.26299 0.005117-0.372483 0.011256l-108.298542 59.481719c2.599198 6.033413 14.283308 34.909068 14.283308 65.024969 0 90.225931-71.063499 164.172083-160.166863 168.799474-1.279133 7.086395-8.240685 46.916543-8.240685 76.8022 0 29.879518 6.960529 69.695339 8.247848 76.795037 89.094154 4.629437 160.1597 78.57252 160.1597 168.801521 0 30.277584-11.811 59.286268-14.32731 65.12423l102.501512 57.31538c0.064468 0.00921 0.143263 0.00921 0.230244 0.00921 1.49505 0 2.914376-0.549515 3.422959-0.876973 1.916653-2.054799 17.223267-18.261922 39.277562-34.425044 32.865525-24.089651 64.0999-36.300764 92.835362-36.300764 29.004591 0 60.477396 12.443403 93.535303 36.994566C640.897184 845.551772 656.272359 862.058724 658.180825 864.149339L658.180825 864.149339zM525.556249 649.984654c-85.424578 0-154.923442-69.50091-154.923442-154.927535 0-85.424578 69.499887-154.924465 154.923442-154.924465 85.427648 0 154.931628 69.499887 154.931628 154.924465C680.487877 580.483744 610.983897 649.984654 525.556249 649.984654L525.556249 649.984654zM525.556249 392.82883c-56.367799 0-102.224196 45.858444-102.224196 102.226243 0 56.371892 45.857421 102.231359 102.224196 102.231359 56.372915 0 102.237499-45.859467 102.237499-102.231359C627.793748 438.687274 581.931211 392.82883 525.556249 392.82883L525.556249 392.82883z"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-calendar" viewBox="0 0 1025 1024">' + '' + '<path d="M938.722986 96.00832l-138.687786 0 0-63.99872c0-17.694366-14.294754-32.0096-32.0096-32.0096s-32.0096 14.294754-32.0096 32.0096l0 63.99872-191.99616 0 0-63.99872c0-17.694366-14.335713-32.0096-32.0096-32.0096s-32.0096 14.294754-32.0096 32.0096l0 63.99872-191.99616 0 0-63.99872c0-17.694366-14.335713-32.0096-32.0096-32.0096s-32.0096 14.294754-32.0096 32.0096l0 63.99872-138.646827 0c-47.144017 0-85.338453 38.173957-85.338453 85.317974l0 757.335253c0 47.144017 38.214916 85.338453 85.338453 85.338453l853.323094 0c47.144017 0 85.317974-38.214916 85.317974-85.338453l0-757.335253c0-47.144017-38.173957-85.317974-85.317974-85.317974zM960.042239 938.641067c0 11.775764-9.563969 21.339733-21.319254 21.339733l-853.323094 0c-11.775764 0-21.339733-9.563969-21.339733-21.339733l0-757.335253c0-11.734805 9.563969-21.319254 21.339733-21.319254l138.646827 0 0 63.99872c0 17.694366 14.335713 32.0096 32.0096 32.0096s32.0096-14.294754 32.0096-32.0096l0-63.99872 191.99616 0 0 63.99872c0 17.694366 14.335713 32.0096 32.0096 32.0096s32.0096-14.294754 32.0096-32.0096l0-63.99872 191.99616 0 0 63.99872c0 17.694366 14.294754 32.0096 32.0096 32.0096s32.0096-14.294754 32.0096-32.0096l0-63.99872 138.687786 0c11.734805 0 21.319254 9.563969 21.319254 21.319254l0 757.335253zM224.067199 383.99232l127.99744 0 0 96.00832-127.99744 0zM224.067199 543.99936l127.99744 0 0 96.00832-127.99744 0zM224.067199 703.98592l127.99744 0 0 96.00832-127.99744 0zM448.052479 703.98592l127.99744 0 0 96.00832-127.99744 0zM448.052479 543.99936l127.99744 0 0 96.00832-127.99744 0zM448.052479 383.99232l127.99744 0 0 96.00832-127.99744 0zM672.058239 703.98592l127.99744 0 0 96.00832-127.99744 0zM672.058239 543.99936l127.99744 0 0 96.00832-127.99744 0zM672.058239 383.99232l127.99744 0 0 96.00832-127.99744 0z"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-renzhengyouxiang" viewBox="0 0 1024 1024">' + '' + '<path d="M885.727285 134.724401 137.500119 134.724401c-41.463344 0-75.17412 33.162284-75.17412 74.002434l0 451.134771c0 40.804335 33.710776 73.92978 75.17412 73.92978l748.227166 0c41.60763 0 75.172073-33.125445 75.172073-73.92978l0-451.134771C960.899358 167.885662 927.334915 134.724401 885.727285 134.724401L885.727285 134.724401 885.727285 134.724401zM867.738585 187.703009 569.345568 447.849958c-26.030863 22.833031-45.301765 34.168194-57.732889 34.168194s-31.699979-11.335163-57.769728-34.168194L155.488819 187.703009 867.738585 187.703009 867.738585 187.703009 867.738585 187.703009zM118.231263 643.334187 118.231263 235.765655l233.051847 200.969151L118.231263 643.334187 118.231263 643.334187 118.231263 643.334187zM157.425937 680.774915l233.893005-204.224288 38.317701 33.07121c22.267143 19.140942 49.725518 28.957519 81.975013 28.957519 32.431643 0 59.671031-9.816576 82.048691-28.957519l38.317701-33.07121 233.893005 204.224288L157.425937 680.774915 157.425937 680.774915 157.425937 680.774915zM904.995117 643.334187 671.978063 436.734806l233.017054-200.969151L904.995117 643.334187 904.995117 643.334187 904.995117 643.334187zM904.995117 643.334187"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-shangyi" viewBox="0 0 1024 1024">' + '' + '<path d="M723.271798 891.177925c-141.552923 0-283.10687 0-424.659793 0-7.079232-1.813299-14.623046-2.618641-21.155832-5.621021-24.229844-11.136641-35.814694-30.792307-35.839253-57.211003-0.085958-92.047416-0.033769-184.094832-0.033769-276.143271 0-1.252527-0.099261-2.51324 0.017396-3.755534 0.232291-2.486634-0.716314-3.682879-3.303232-4.010337-13.936407-1.760087-25.282826-8.54256-35.060517-18.321274-38.297234-38.302351-76.587306-76.611865-114.925473-114.873284-8.745175-8.728802-14.859429-18.863626-17.510816-31.000038-0.424672-1.943258-0.949628-3.865028-1.428535-5.79703 0-4.384867 0-8.768711 0-13.153578 0.248663-0.3776 0.671289-0.733711 0.721431-1.136893 1.885953-15.170514 9.625218-27.022447 20.267603-37.617759 51.593052-51.362808 103.020328-102.893438 154.451698-154.417929 2.51631-2.520403 4.725628-5.409197 6.740518-8.357342 11.248182-16.458857 26.723641-26.093285 46.64332-26.550703 29.261441-0.671289 58.549487-0.288572 87.825254-0.211824 2.042519 0.005117 4.172019 0.997724 6.108115 1.870604 10.392698 4.683672 20.48045 10.168594 31.144324 14.100136 34.870182 12.855796 70.989821 17.023722 108.001783 14.259772 34.94079-2.608407 68.017116-11.483542 98.78691-28.523637 2.058892-1.139963 4.705162-1.711991 7.079232-1.718131 30.215162-0.078795 60.433394 0.204661 90.64651-0.052189 17.412578-0.148379 32.197306 5.631254 44.419675 17.833157 54.29151 54.200436 108.642372 108.342544 162.698522 162.777317 24.125467 24.294312 23.904433 60.305481-0.200568 84.591607-38.712697 39.002292-77.642334 77.788667-116.541273 116.604718-8.708336 8.688893-18.971074 14.722306-31.222095 17.033955-6.750751 1.274016-6.745634 1.305739-6.745634 8.096399-0.001023 95.972818-0.031722 191.944614 0.021489 287.917432 0.013303 24.006763-9.543354 42.608423-30.269397 55.175647C741.734288 887.946324 732.546022 889.685945 723.271798 891.177925zM295.511387 449.142393c0 3.209088 0 5.039783 0 6.870478 0 123.213229 0 246.426459 0.002047 369.639688 0 1.722224-0.01842 3.445472 0.047072 5.16565 0.153496 3.975545 2.308579 5.966898 6.229888 6.108115 1.407046 0.051165 2.817162 0.040932 4.226255 0.040932 136.677892 0.002047 273.354761 0.002047 410.032654 0 1.409093 0 2.820232 0.01535 4.225231-0.056282 3.711532-0.189312 5.749958-2.158153 5.978155-5.872754 0.105401-1.716084 0.058328-3.442402 0.058328-5.164626 0.002047-128.066771 0.002047-256.133541 0.002047-384.200312 0-1.792832 0-3.585665 0-6.515391 2.168386 1.980097 3.420913 3.089361 4.6366 4.237511 12.637832 11.927657 25.272593 23.858384 37.902238 35.796274 5.869684 5.547343 7.339152 5.536087 13.102413-0.227174 37.416168-37.420261 74.830289-74.843592 112.243387-112.2659 6.384407-6.386454 6.380314-7.560186-0.059352-14.000875-48.819892-48.821939-97.640808-97.642854-146.462746-146.46377-4.206812-4.206812-8.3072-8.529257-12.68081-12.554944-1.5104-1.390673-3.64911-2.750647-5.592368-2.89698-5.572926-0.418532-11.193947-0.236384-16.795525-0.240477-20.039405-0.013303-40.080857-0.115634-60.118216 0.100284-3.443425 0.036839-7.176446 0.835018-10.260691 2.339278-35.537378 17.334807-73.251328 26.260084-112.51661 28.293393-53.042053 2.746554-104.150058-5.484921-152.156422-29.347398-1.363044-0.677429-2.935865-1.319042-4.41352-1.324158-23.64042-0.081864-47.281863-0.144286-70.920236 0.097214-2.066055 0.021489-5.349845 1.77339-5.936199 3.461845-1.929955 5.556553-6.253424 8.851599-10.082636 12.682857-52.803623 52.80874-105.612363 105.612363-158.415986 158.422126-5.942339 5.943362-5.939269 7.426133 0.00307 13.367449 30.66644 30.66337 61.33902 61.322647 92.009554 91.981924 7.30743 7.305383 14.58723 14.639418 21.935592 21.903869 3.877307 3.833305 6.045693 3.89368 10.05296 0.396019 2.711761-2.366907 5.328355-4.844332 7.990998-7.267521C271.341918 471.128127 282.906302 460.609563 295.511387 449.142393z"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-bofangqizanting" viewBox="0 0 1024 1024">' + '' + '<path d="M511.844457 959.411983c-247.190869 0-447.578782-200.38075-447.578782-447.578782 0-247.190869 200.387913-447.618691 447.578782-447.618691s447.578782 200.428845 447.578782 447.618691C959.423239 759.031233 759.035326 959.411983 511.844457 959.411983L511.844457 959.411983zM368.275621 737.518267l62.210877 0L430.486498 286.302655l-62.210877 0L368.275621 737.518267zM591.140455 286.141996l0 451.215612 62.210877 0L653.351332 286.141996 591.140455 286.141996z"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-yinlediantai" viewBox="0 0 1024 1024">' + '' + '<path d="M329.955556 512C334.119822 510.202311 325.154133 512 329.955556 512L329.955556 512z"  ></path>' + '' + '<path d="M694.044444 512C698.845867 512 689.880178 510.202311 694.044444 512L694.044444 512z"  ></path>' + '' + '<path d="M887.466667 477.866667C888.900267 481.644089 887.466667 473.588622 887.466667 477.866667L887.466667 477.866667z"  ></path>' + '' + '<path d="M136.487822 477.934933 136.533333 477.866667 136.510578 477.775644Z"  ></path>' + '' + '<path d="M877.613511 570.072178C883.689244 563.882667 887.466667 555.463111 887.466667 546.133333l0-68.266667c-17.658311-190.941867-179.928178-352.733867-375.466667-352.733867-195.1744 0-357.1712 161.1776-375.307378 351.6416 0 0.045511 0.022756 0.091022 0.022756 0.136533 0 0.2048-0.113778 0.364089-0.136533 0.546133C136.578844 477.5936 136.556089 477.730133 136.533333 477.866667l0 68.266667c0 9.329778 3.777422 17.749333 9.853156 23.938844C112.184889 604.956444 91.022222 652.6976 91.022222 705.399467c0 106.814578 86.607644 193.422222 193.422222 193.422222 10.581333 0 33.3824 1.615644 44.259556 0.136533-1.365333 0.341333 4.846933 1.479111 1.251556-0.091022 18.8416 0 11.377778-15.291733 11.377778-34.156089L341.333333 546.133333c0-18.864356 7.463822-34.133333-11.377778-34.133333-10.422044-1.752178-34.588444-0.022756-45.511111-0.022756-37.637689 0-72.658489 10.922667-102.4 29.559467l0-52.315022c6.052978-176.901689 151.574756-318.577778 329.955556-318.577778 178.403556 0 323.333689 141.676089 329.386667 318.577778L841.955556 541.536711c-29.718756-18.614044-64.762311-29.559467-102.4-29.559467-10.922667 0-35.089067-1.729422-45.511111 0.022756-18.8416 0-11.377778 15.268978-11.377778 34.133333l0 318.555022c0 18.8416-7.463822 34.133333 11.377778 34.133333-3.572622 1.547378 2.571378 0.432356 1.251556 0.091022 10.899911 1.456356 33.678222-0.113778 44.259556-0.113778 106.814578 0 193.422222-86.607644 193.422222-193.399467C932.977778 652.674844 911.815111 604.933689 877.613511 570.072178zM284.444444 557.488356c3.8912 0 7.554844 0.841956 11.377778 1.160533l0 293.523911c-3.822933 0.295822-7.486578 1.137778-11.377778 1.137778-81.692444 0-147.911111-66.218667-147.911111-147.911111S202.752 557.488356 284.444444 557.488356zM739.555556 853.287822c-3.8912 0-7.554844-0.841956-11.377778-1.160533L728.177778 558.648889c3.822933-0.318578 7.486578-1.160533 11.377778-1.160533 81.692444 0 147.911111 66.218667 147.911111 147.888356C887.466667 787.069156 821.248 853.287822 739.555556 853.287822z"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-guanbi" viewBox="0 0 1024 1024">' + '' + '<path d="M575.37 511.977l371.506-371.461c17.498-17.499 17.498-45.848 0-63.348-17.499-17.497-45.85-17.497-63.349 0L512.021 448.674 140.473 77.126c-17.5-17.499-45.848-17.499-63.348 0-17.499 17.497-17.499 45.849 0 63.346l371.55 371.505-371.55 371.55c-17.499 17.499-17.499 45.845 0 63.347 17.273 17.27 46.088 17.258 63.348 0l371.548-371.551c0 0 371.376 371.378 371.506 371.508 17.257 17.258 46.118 17.227 63.349 0 17.498-17.499 17.498-45.849 0-63.348L575.37 511.977z"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-zhutishangyiqu" viewBox="0 0 1024 1024">' + '' + '<path d="M865.336374 379.030569"  ></path>' + '' + '<path d="M511.707334 959.224718c-247.174496 0-447.549106-200.37461-447.549106-447.549106S264.533862 64.12753 511.707334 64.12753s447.549106 200.37461 447.549106 447.549106S758.88183 959.224718 511.707334 959.224718zM683.550121 416.702564c0.37146-64.528666-27.208689-80.500429-82.741469-47.913243-55.532781 32.587186-111.251803 64.85203-167.156044 96.79351-15.035438 8.590656-25.988908 17.182334-32.936133 25.77299l0-113.945145c0-16.807804-13.625322-30.433126-30.433126-30.433126s-30.433126 13.625322-30.433126 30.433126l0 268.528849c0 16.807804 13.625322 30.433126 30.433126 30.433126s30.433126-13.625322 30.433126-30.433126L400.716474 535.636327c6.948249 8.590656 17.900695 17.182334 32.936133 25.77299 55.904241 31.94148 111.623263 64.206324 167.156044 96.79351 55.532781 32.587186 83.112929 16.616446 82.741469-47.913243C683.178661 545.760918 683.178661 481.232253 683.550121 416.702564z"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-zhutixiayiqu" viewBox="0 0 1024 1024">' + '' + '<path d="M865.336374 379.030569"  ></path>' + '' + '<path d="M511.707334 64.12753c247.174496 0 447.549106 200.37461 447.549106 447.549106S758.88183 959.224718 511.707334 959.224718 64.159252 758.850108 64.159252 511.675612 264.533862 64.12753 511.707334 64.12753zM339.865571 606.649684c-0.37146 64.528666 27.208689 80.500429 82.741469 47.913243 55.532781-32.587186 111.251803-64.85203 167.156044-96.79351 15.035438-8.590656 25.988908-17.182334 32.936133-25.77299l0 113.945145c0 16.807804 13.625322 30.433126 30.433126 30.433126s30.433126-13.625322 30.433126-30.433126L683.565471 377.411699c0-16.807804-13.625322-30.433126-30.433126-30.433126s-30.433126 13.625322-30.433126 30.433126l0 110.304222c-6.948249-8.590656-17.900695-17.182334-32.936133-25.77299-55.904241-31.94148-111.623263-64.206324-167.156044-96.79351-55.532781-32.587186-83.112929-16.616446-82.741469 47.913243C340.237031 477.591329 340.237031 542.119995 339.865571 606.649684z"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-guangbodiantai" viewBox="0 0 1024 1024">' + '' + '<path d="M856.485158 861.677245C936.891155 763.867808 981.6 641.388618 981.6 512.12121 981.6 382.738797 936.811245 260.158162 856.27481 162.309447 846.166733 150.028516 828.016854 148.26707 815.735923 158.375148 803.454992 168.483225 801.693546 186.633103 811.801622 198.914034 883.927587 286.544347 924 396.216998 924 512.12121 924 627.922461 883.99911 737.504278 811.990083 825.099274 801.889354 837.38625 803.661658 855.535069 815.948634 865.635798 828.23561 875.736528 846.384432 873.964221 856.485158 861.677245L856.485158 861.677245Z"  ></path>' + '' + '<path d="M164.753057 162.322754C84.34706 260.132193 39.638216 382.611382 39.638216 511.87879 39.638216 641.261203 84.426972 763.841837 164.963407 861.690554 175.071485 873.971485 193.221363 875.732931 205.502293 865.624851 217.783225 855.516774 219.54467 837.366896 209.436593 825.085965 137.310628 737.455654 97.238216 627.783002 97.238216 511.87879 97.238216 396.077539 137.239105 286.49572 209.248134 198.900727 219.348863 186.613751 217.576558 168.46493 205.289582 158.364202 193.002606 148.263474 174.853786 150.035778 164.753057 162.322754L164.753057 162.322754Z"  ></path>' + '' + '<path d="M334.643498 319.711013C290.431204 373.492819 265.838216 440.864928 265.838216 511.936358 265.838216 583.07103 290.475155 650.498925 334.759146 704.302294 344.867222 716.583226 363.017101 718.344669 375.298032 708.236592 387.578963 698.128515 389.340406 679.978637 379.23233 667.697706 343.35881 624.112739 323.438218 569.592829 323.438218 511.936358 323.438218 454.331088 343.323248 399.856349 379.138576 356.288986 389.239306 344.00201 387.467002 325.85319 375.180022 315.752461 362.893046 305.651733 344.744227 307.424037 334.643498 319.711013L334.643498 319.711013Z"  ></path>' + '' + '<path d="M679.35224 704.288986C723.564534 650.507181 748.15752 583.135072 748.15752 512.063642 748.15752 440.92897 723.520582 373.501075 679.236592 319.697707 669.128515 307.416775 650.978637 305.65533 638.697706 315.763407 626.416774 325.871485 624.655331 344.021363 634.763408 356.302294 670.636928 399.887261 690.55752 454.407171 690.55752 512.063642 690.55752 569.668912 670.67249 624.143651 634.857162 667.711014 624.756432 679.99799 626.528736 698.14681 638.815712 708.247539 651.102691 718.348266 669.25151 716.575962 679.35224 704.288986L679.35224 704.288986Z"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-yy2" viewBox="0 0 1024 1024">' + '' + '<path d="M263.751374 957.486559l-18.009793 0c-58.531828 0-106.523833-47.889677-106.523833-106.523833L139.217748 578.462276c0-58.531828 47.889677-106.523833 106.523833-106.523833l18.009793 0c58.531828 0 106.523833 47.889677 106.523833 106.523833l0 272.602778C370.275207 909.596882 322.283202 957.486559 263.751374 957.486559z"  ></path>' + '' + '<path d="M779.077046 958.509843l-18.009793 0c-58.531828 0-106.523833-47.889677-106.523833-106.523833L654.54342 579.48556c0-58.531828 47.889677-106.523833 106.523833-106.523833l18.009793 0c58.531828 0 106.523833 47.889677 106.523833 106.523833l0 272.602778C885.600879 910.620166 837.711202 958.509843 779.077046 958.509843z"  ></path>' + '' + '<path d="M98.388728 726.633756 98.388728 541.82872c0-226.452683 177.744379-418.523034 404.094734-423.537124 234.945938-5.321075 423.127811 185.316678 423.127811 419.034676l0 189.307485c0 15.553912 12.58639 28.24263 28.24263 28.24263l0 0c15.553912 0 28.24263-12.58639 28.24263-28.24263L982.096532 539.782152c0-263.495553-215.605876-485.445788-479.101429-480.431698C247.583492 64.159888 42.005796 272.705106 42.005796 529.24233l0 197.391426c0 15.553912 12.58639 28.24263 28.24263 28.24263l0 0C85.802338 754.774058 98.388728 742.187669 98.388728 726.633756z"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-erji" viewBox="0 0 1024 1024">' + '' + '<path d="M127.043976 739.943502l-58.558697 7.4159c-0.773619-6.096858-37.673018-311.126017 121.392768-491.031433 66.794265-75.575256 168.167071-129.082914 321.31917-129.082914 158.018943 0 261.21221 54.91675 328.187601 132.085294C997.404784 441.375499 953.953156 747.041154 953.953156 747.041154l-58.4666-8.280594c0.409322-2.775206 38.036291-280.913924-100.691283-440.754353-64.381309-74.164117-159.793356-111.747083-283.598057-111.747083-119.846552 0-213.07384 36.718273-277.092899 109.153002C93.556281 454.43391 126.680702 736.895073 126.997927 739.625254L127.043976 739.943502"  ></path>' + '' + '<path d="M806.368866 894.668423 717.810924 894.668423 717.810924 569.966203 806.368866 569.966203 806.368866 894.668423 806.368866 894.668423Z"  ></path>' + '' + '<path d="M304.595788 894.668423 216.036823 894.668423 216.036823 569.966203 304.595788 569.966203 304.595788 894.668423 304.595788 894.668423Z"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-bofang2" viewBox="0 0 1024 1024">' + '' + '<path d="M384.00192 682.672128c0 46.937408 30.728755 62.291034 68.27008 34.135552l204.788736-153.601792c37.540301-28.155482 37.540301-74.238886 0-102.395392L452.272 307.208704C414.730675 279.053222 384.00192 294.406848 384.00192 341.344256L384.00192 682.672128z"  ></path>' + '' + '<path d="M512 42.681728c258.788566 0 469.326976 210.53841 469.326976 469.325952 0 258.788566-210.53841 469.326976-469.326976 469.326976-258.787542 0-469.325952-210.53841-469.325952-469.326976C42.674048 253.221162 253.212458 42.681728 512 42.681728M512 0.01536c-282.78667 0-511.99232 229.246609-511.99232 511.99232 0 282.788718 229.20565 511.99232 511.99232 511.99232 282.704751 0 511.99232-229.204626 511.99232-511.99232C1023.99232 229.261969 794.704751 0.01536 512 0.01536L512 0.01536z"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-diantai" viewBox="0 0 1024 1024">' + '' + '<path d="M879.232 715.392c40.64-66.752 62.528-143.488 62.528-223.36 0-237.312-192.384-429.76-429.76-429.76-237.312 0-429.696 192.384-429.696 429.76 0 75.84 19.712 148.864 56.576 213.248 7.936 13.76 25.344 18.496 39.104 10.624 13.696-7.808 18.496-25.344 10.624-39.04-32-55.744-49.024-119.04-49.024-184.832 0-205.632 166.784-372.416 372.416-372.416 205.76 0 372.352 166.784 372.352 372.416 0 69.312-18.88 135.744-54.144 193.536-8.256 13.504-4.032 31.104 9.472 39.424C853.248 733.184 870.848 728.896 879.232 715.392zM732.224 613.44c24.512-40.064 37.632-86.144 37.632-134.08 0-142.464-115.392-257.856-257.856-257.856-142.4 0-257.792 115.392-257.792 257.856 0 45.504 11.84 89.344 33.92 128 7.872 13.76 25.344 18.432 39.104 10.56 13.76-7.808 18.496-25.344 10.688-39.04C320.64 548.8 311.424 514.816 311.424 479.36 311.424 368.576 401.28 278.848 512 278.848s200.512 89.728 200.512 200.512c0 37.312-10.112 73.152-29.12 104.256-8.256 13.504-4.032 31.104 9.472 39.36C706.496 631.232 724.096 626.944 732.224 613.44zM678.144 651.52c-1.984-9.792-6.976-19.392-15.488-28.544C654.144 613.44 646.4 606.528 639.36 602.24S625.28 594.368 618.112 591.424C611.008 588.416 603.264 585.152 595.008 581.568c-8.384-3.52-17.92-9.344-28.992-17.472C553.152 555.328 542.912 546.304 535.36 537.088 527.808 527.936 521.472 519.744 516.288 512.512 511.36 505.472 501.312 490.56 496.448 486.464l0 0.448C492.544 482.048 486.72 478.784 479.936 478.784c-12.032 0-21.696 9.6-21.696 21.504l0 308.352c-19.2-11.712-43.136-18.88-69.632-18.88-62.144 0-112.576 38.528-112.576 86.016s50.432 85.952 112.576 85.952c62.144 0 112.512-38.464 112.512-85.952 0 0 0.512-9.408 0.512-10.304l0-274.56c0.576-4.864 2.368-6.336 4.224-7.104C510.336 581.696 516.48 584.32 524.608 591.744c8.384 8.448 19.008 17.536 31.68 27.264 12.736 9.728 27.264 16.192 43.968 19.328 15.744 2.88 27.392 7.552 35.008 14.08 7.488 6.592 12.224 16.768 14.016 30.528 1.152 8.576 2.752 14.4 4.736 17.472 1.984 3.2 4.224 4.928 6.848 5.312 2.624 0.32 5.76-2.048 9.344-7.168s6.4-11.84 7.872-19.904C680 670.528 679.872 661.504 678.144 651.52z"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-wodegedan" viewBox="0 0 1025 1024">' + '' + '<path d="M957.678592 317.6448c-5.799936-9.921536-18.53952-13.280256-28.474368-7.493632l-166.518784 97.135616c-7.673856 4.482048-11.365376 13.12768-9.976832 21.41184-0.19456 1.124352-0.347136 2.262016-0.347136 3.427328l0 206.345216c-25.033728-24.561664-59.29472-39.742464-97.135616-39.742464-76.640256 0-138.765312 62.125056-138.765312 138.765312 0 76.640256 62.125056 138.766336 138.765312 138.766336s138.765312-62.125056 138.765312-138.766336L793.991168 437.233664l156.194816-91.113472C960.120832 340.319232 963.465216 327.580672 957.678592 317.6448zM655.224832 834.630656c-53.646336 0-97.135616-43.48928-97.135616-97.135616 0-53.646336 43.48928-97.135616 97.135616-97.135616 53.64736 0 97.135616 43.48928 97.135616 97.135616C752.360448 791.141376 708.871168 834.630656 655.224832 834.630656z"  ></path>' + '' + '<path d="M562.367488 547.811328c5.203968-10.241024 1.096704-22.771712-9.158656-27.961344-17.799168-9.024512-36.1216-16.37888-54.895616-22.049792 56.433664-32.275456 94.471168-93.057024 94.471168-162.726912 0-103.463936-83.884032-187.333632-187.333632-187.333632-0.001024 0-0.002048 0-0.003072 0s-0.002048 0-0.003072 0c-103.463936 0-187.333632 83.869696-187.333632 187.333632 0 68.46464 36.731904 128.338944 91.557888 161.019904-141.867008 39.876608-246.177792 170.395648-246.177792 324.836352 0 11.48928 9.325568 20.814848 20.814848 20.814848 11.48928 0 20.814848-9.325568 20.814848-20.814848 0-163.07712 132.673536-295.737344 295.737344-295.737344 46.98624 0 91.918336 10.684416 133.548032 31.791104C544.606208 562.173952 557.164544 558.094336 562.367488 547.811328zM508.473344 232.045568c26.363904 26.366976 42.669056 62.793728 42.669056 103.028736s-16.305152 76.66176-42.669056 103.028736c-26.366976 26.366976-62.79168 42.6752-103.02464 42.6752-80.482304-0.002048-145.700864-65.234944-145.700864-145.703936 0-80.468992 65.21856-145.701888 145.700864-145.703936C445.681664 189.371392 482.106368 205.679616 508.473344 232.045568z"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-bofang1" viewBox="0 0 1024 1024">' + '' + '<path d="M512 52.481282c-249.221108 0-451.255521 202.034413-451.255521 451.255521s202.033389 451.255521 451.255521 451.255521 451.255521-202.034413 451.255521-451.255521S761.221108 52.481282 512 52.481282zM703.246719 529.409508 417.663448 694.290743c-19.763113 11.409864-44.466748-2.852978-44.466748-25.672706L373.196701 338.855568c0-22.819728 24.703635-37.08257 44.466748-25.672706l285.583271 164.881235C723.009831 489.473961 723.009831 517.999644 703.246719 529.409508z"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-jiahao1" viewBox="0 0 1024 1024">' + '' + '<path d="M863.328262 481.340895l-317.344013 0.099772L545.984249 162.816826c0-17.664722-14.336138-32.00086-32.00086-32.00086s-31.99914 14.336138-31.99914 32.00086l0 318.400215-322.368714-0.17718c-0.032684 0-0.063647 0-0.096331 0-17.632039 0-31.935493 14.239806-32.00086 31.904529-0.096331 17.664722 14.208843 32.031824 31.871845 32.095471l322.59234 0.17718 0 319.167424c0 17.695686 14.336138 32.00086 31.99914 32.00086s32.00086-14.303454 32.00086-32.00086L545.982529 545.440667l317.087703-0.099772c0.063647 0 0.096331 0 0.127295 0 17.632039 0 31.935493-14.239806 32.00086-31.904529S880.960301 481.404542 863.328262 481.340895z"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-iconfontbiaozhunmoban01" viewBox="0 0 1024 1024">' + '' + '<path d="M685.424818 155.291832l-39.476083-9.712199-125.352963 509.493923c-82.655512-65.398476-205.016327-34.17331-243.86103 45.712111-12.666484 25.993001-6.018064 57.95597 0.202615 75.089186 33.17354 91.364871 153.168472 84.049255 233.44275 13.19144 33.023114-29.148877 43.258223-60.231803 62.442144-138.205689L650.673339 334.437955c47.178509 10.099009 113.477494 86.86437 118.413923 142.888338 3.103688 35.539424-7.522324 79.317487-31.753191 105.942891-6.149047 6.729262-24.789593 29.28293-15.446807 27.576055 17.396205-3.178389 25.749454-9.743922 43.581588-26.340925 16.188704-15.068184 31.66928-39.888476 38.125319-56.249095C872.507704 353.224834 667.787112 296.462039 685.424818 155.291832"  ></path>' + '' + '<path d="M512 981.675032c-63.398936 0-124.909871-12.420891-182.823885-36.915771-55.929824-23.655769-106.157785-57.519018-149.287071-100.648304-43.129286-43.128263-76.992535-93.356224-100.649328-149.287071-24.495904-57.914014-36.915771-119.423927-36.915771-182.823885 0-63.398936 12.419867-124.909871 36.915771-182.822862 23.656793-55.930847 57.520041-106.157785 100.649328-149.287071 43.129286-43.129286 93.356224-76.992535 149.287071-100.649328 57.914014-24.495904 119.42495-36.915771 182.823885-36.915771s124.908848 12.419867 182.822862 36.915771c55.930847 23.656793 106.157785 57.520041 149.287071 100.649328 43.129286 43.128263 76.992535 93.356224 100.648304 149.287071 24.495904 57.912991 36.915771 119.423927 36.915771 182.822862 0 63.399959-12.420891 124.909871-36.915771 182.823885-23.655769 55.929824-57.519018 106.157785-100.648304 149.287071-43.128263 43.129286-93.355201 76.992535-149.287071 100.648304C636.908848 969.254142 575.398936 981.675032 512 981.675032zM512 73.024154c-59.267848 0-116.755144 11.604292-170.864506 34.490535-52.271504 22.10853-99.217722 53.762461-139.538033 94.081749s-71.973218 87.267553-94.082772 139.538033c-22.886243 54.108339-34.490535 111.595634-34.490535 170.864506s11.604292 116.755144 34.490535 170.864506c22.10853 52.271504 53.763484 99.218746 94.082772 139.538033s87.266529 71.973218 139.538033 94.081749c54.109362 22.886243 111.596657 34.490535 170.864506 34.490535 59.267848 0 116.755144-11.604292 170.864506-34.490535 52.271504-22.10853 99.218746-53.762461 139.538033-94.081749s71.973218-87.266529 94.081749-139.538033c22.886243-54.109362 34.490535-111.596657 34.490535-170.864506s-11.604292-116.755144-34.490535-170.864506c-22.10853-52.271504-53.762461-99.218746-94.081749-139.538033s-87.266529-71.973218-139.538033-94.081749C628.755144 84.628446 571.267848 73.024154 512 73.024154z"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-thinup" viewBox="0 0 1024 1024">' + '' + '<path d="M4.928 762.215l506.112-536.832 508.096 536.768-34.879 33.024-473.151-499.904-471.296 499.84z"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-thindown" viewBox="0 0 1024 1024">' + '' + '<path d="M1019.072 261.785l-506.112 536.832-508.096-536.768 34.879-33.024 473.151 499.904 471.296-499.84z"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-jiantou-copy" viewBox="0 0 1024 1024">' + '' + '<path d="M703.625 62c16.447 0 32.898 6.278 45.453 18.834 25.111 25.113 25.111 65.793 0 90.903l-340.326 340.263 340.326 340.263c25.111 25.081 25.111 65.793 0 90.906-25.111 25.111-65.793 25.111-90.906 0l-385.84-385.715c-12.054-12.053-18.833-28.376-18.833-45.451s6.779-33.397 18.833-45.451l385.838-385.715c12.555-12.554 29.004-18.833 45.453-18.833z"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-yinlexianxing" viewBox="0 0 1024 1024">' + '' + '<path d="M896.325667 103.521748c0-2.509147-0.440022-4.892427-1.192152-7.107885l-1.650593-15.972786c-1.213641-11.790534-11.645225-19.777439-23.26896-17.72878L339.751473 156.2476c-9.595542 1.714038-16.578584 9.616008-17.560958 18.857487-2.446725 3.51301-3.889587 7.820106-3.889587 12.4608L318.300928 727.164454c-18.877953-10.662851-40.829917-16.808828-64.224744-16.808828-70.935586 0-128.449487 56.279794-128.449487 125.646652 0 69.368904 57.513902 125.606743 128.449487 125.606743S382.525672 905.371182 382.525672 836.002278c0-4.848425-0.272199-9.614985-0.815575-14.300704 0.543376-1.880837 0.815575-3.88754 0.815575-5.936199L382.525672 383.124817l449.574229-79.277578 0 297.709449c-18.877953-10.704806-40.829917-16.808828-64.224744-16.808828-70.935586 0-128.449487 56.237839-128.449487 125.606743 0 69.408813 57.513902 125.646652 128.449487 125.646652s128.449487-56.237839 128.449487-125.646652c0-4.76656-0.272199-9.533121-0.815575-14.176884 0.543376-1.880837 0.815575-3.845585 0.815575-5.852288L896.324644 103.521748zM254.076184 898.639874c-35.478026 0-64.224744-28.182876-64.224744-62.929238s28.746718-62.929238 64.224744-62.929238 64.224744 28.182876 64.224744 62.929238S289.55421 898.639874 254.076184 898.639874zM767.87618 772.781398c-35.479049 0-64.225767-28.180829-64.225767-62.969147 0-34.748409 28.746718-62.929238 64.225767-62.929238 35.478026 0 64.224744 28.180829 64.224744 62.929238C832.0999 744.600569 803.354206 772.781398 767.87618 772.781398zM832.0999 238.5777 382.525672 317.855278 382.525672 214.074633l449.574229-78.189803L832.0999 238.5777z"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-yinle" viewBox="0 0 1024 1024">' + '' + '<path d="M844.743872 64.641229l-483.775168 80.814584c-1.567705 0.25071-3.031033 0.710175-4.453429 1.254573l-17.475 0c-11.915377 0-21.38403 9.532097-21.38403 21.280676l0 553.029462c-18.875906-10.912537-40.825824-17.140379-64.216557-17.140379-70.927399 0-128.433114 57.359382-128.433114 128.139425S182.512289 960.15695 253.439688 960.15695c70.926376 0 128.433114-57.359382 128.433114-128.139425 0-5.184069-0.314155-10.285251-0.899486-15.259542 0.585331-1.964748 0.899486-4.013407 0.899486-6.187933l0-449.764564 449.513854-79.267345 0 311.298955c-18.875906-10.870582-40.825824-17.142425-64.216557-17.142425-70.927399 0-128.433114 57.401338-128.433114 128.183428 0 70.738088 57.505715 128.139425 128.433114 128.139425 70.926376 0 128.432091-57.401338 128.432091-128.139425 0-5.184069-0.313132-10.285251-0.898463-15.301498 0.585331-1.966795 0.898463-4.015454 0.898463-6.187933l0-597.97307c0-10.45205-7.587815-19.190061-17.579377-20.946055-3.491521-2.173502-7.881504-3.051499-12.710486-2.257413l-11.370978 1.922792-1.170662 0C849.927941 63.135946 847.21004 63.679321 844.743872 64.641229z"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-arr" viewBox="0 0 1024 1024">' + '' + '<path d="M300.295344 63.815421 756.236584 510.525416 300.295344 957.234387 264.856203 922.540214 685.507706 510.525416 264.856203 98.509594Z"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-yinle1" viewBox="0 0 1026 1024">' + '' + '<path d="M1.024 225.32608l532.48 0 0 40.957952-532.48 0 0-40.957952Z"  ></path>' + '' + '<path d="M1.024 409.63584l532.48 0 0 40.957952-532.48 0 0-40.957952Z"  ></path>' + '' + '<path d="M1.024 593.944576l532.48 0 0 40.957952-532.48 0 0-40.957952Z"  ></path>' + '' + '<path d="M738.305024 249.8048 1025.024 286.763008C1025.024 81.975296 861.185024 41.017344 697.345024 0l0 30.138368 0 214.387712 0 533.72928c-24.51968 0-63.519744 0-126.200832 0-120.379392 0-160.519168 63.695872-160.519168 121.872384 0 49.3568 36.938752 123.87328 163.84 123.87328 181.440512 0 163.84-145.672192 163.84-245.74464L738.305024 249.8048z"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-yinle2" viewBox="0 0 1024 1024">' + '' + '<path d="M1.496251 226.863982l531.455354 0 0 40.879137-531.455354 0 0-40.879137Z"  ></path>' + '' + '<path d="M1.496251 410.818055l531.455354 0 0 40.879137-531.455354 0 0-40.879137Z"  ></path>' + '' + '<path d="M1.496251 594.772127l531.455354 0 0 40.879137-531.455354 0 0-40.879137Z"  ></path>' + '' + '<path d="M737.357511 251.294576l286.168268 36.88709C1023.525778 83.788025 860.001054 42.908888 696.47633 1.970473L696.47633 32.050846l0 213.975168 0 532.70223c-24.472497 0-63.397514 0-125.956963 0C450.370597 778.727222 410.308062 842.301547 410.308062 900.36611c0 49.261823 36.868693 123.63389 163.524724 123.63389 181.091368 0 163.524724-145.390854 163.524724-245.271756L737.357511 251.294576zM978.971423 241.215321 737.357511 210.077147 737.357511 54.784871C873.215896 91.572824 960.467579 131.971607 978.971423 241.215321zM666.533931 954.996654c-18.404708 18.663281-49.604203 28.125231-92.701144 28.125231-116.735191 0-122.643543-68.943046-122.643543-82.755775 0-51.319169 43.496555-80.760773 119.330124-80.760773L696.47633 819.605337l0 31.397769 0.100159 0C695.358229 892.181698 689.510176 931.72402 666.533931 954.996654z"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-quanping" viewBox="0 0 1024 1024">' + '' + '<path d="M895.310036 128.693034l0 320.416614-34.945907-0.077771L860.364129 188.417277l-261.260306 261.260306-24.628934-24.628934 262.023692-262.023692L574.974263 163.024957l-0.080841-34.331923L895.310036 128.693034zM425.798732 573.375859l-261.260306 261.260306 0-260.615623-34.945907-0.076748 0 320.41559 320.416614 0-0.080841-34.331923L188.403974 860.027461l262.023692-262.023692L425.798732 573.375859z"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-arrow2-up" viewBox="0 0 1024 1024">' + '' + '<path d="M942.936 747.245c29.315-28.497 29.315-74.739 0-103.307l-378.011-367.236c-29.367-28.483-76.982-28.483-106.291 0l-377.997 367.236c-29.367 28.562-29.367 74.806 0 103.307 29.325 28.546 76.929 28.546 106.304 0l324.841-315.6 324.803 315.599c29.367 28.545 76.973 28.544 106.356 0v0z"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-arrow2-down" viewBox="0 0 1024 1024">' + '' + '<path d="M81.066 276.755c-29.315 28.497-29.315 74.739 0 103.307l378.011 367.236c29.367 28.483 76.982 28.483 106.291 0l377.997-367.236c29.367-28.562 29.367-74.806 0-103.307-29.325-28.546-76.929-28.546-106.306 0l-324.841 315.6-324.803-315.599c-29.367-28.545-76.973-28.545-106.356 0v0z"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-arrow2-right" viewBox="0 0 1024 1024">' + '' + '<path d="M276.755 942.936c28.497 29.315 74.739 29.315 103.307 0l367.236-378.011c28.483-29.367 28.483-76.982 0-106.291l-367.236-377.997c-28.562-29.367-74.806-29.367-103.307 0-28.546 29.325-28.546 76.929 0 106.304l315.6 324.841-315.599 324.803c-28.545 29.367-28.544 76.973 0 106.356v0z"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-circulation" viewBox="0 0 1024 1024">' + '' + '<path d="M873.439 305.081c-55.271-55.271-128.756-85.71-206.919-85.71h-307.108v-58.746c0-18.762-12.896-25.785-28.656-15.605l-141.383 91.312c-15.76 10.177-15.606 26.591 0.342 36.471l140.7 87.165c15.95 9.881 28.997 2.614 28.997-16.147v-58.458h307.107c124.969 0 226.638 101.669 226.638 226.638 0 20.663-2.774 41.126-8.244 60.819-4.878 17.558 5.401 35.745 22.959 40.623 2.955 0.821 5.926 1.213 8.851 1.213 14.451 0 27.715-9.569 31.773-24.172 7.069-25.444 10.653-51.85 10.653-78.483 0.001-78.164-30.437-151.65-85.708-206.919zM818.958 751.197l-140.7-87.165c-15.95-9.881-28.997-2.614-28.997 16.147v58.458h-331.6c-124.967 0-226.638-101.668-226.638-226.638 0-43.791 12.502-86.275 36.153-122.86 9.894-15.303 5.508-35.73-9.794-45.622-15.305-9.895-35.73-5.508-45.623 9.795-30.569 47.282-46.726 102.156-46.726 158.687 0 78.163 30.439 151.649 85.709 206.919 55.271 55.269 128.756 85.709 206.919 85.709h331.599v58.746c0 18.762 12.896 25.785 28.656 15.605l141.385-91.311c15.759-10.177 15.606-26.591-0.342-36.471z"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-shuangxianyoujiantou" viewBox="0 0 1024 1024">' + '' + '<path d="M825.6 179.2 467.2 537.6c-12.8 12.8-25.6 12.8-38.4 0L422.4 531.2c-12.8-12.8-12.8-25.6 0-38.4l358.4-358.4c12.8-12.8 25.6-12.8 38.4 0l6.4 6.4C838.4 153.6 838.4 166.4 825.6 179.2z"  ></path>' + '' + '<path d="M467.2 486.4l358.4 358.4c12.8 12.8 12.8 25.6 0 38.4l-6.4 6.4c-12.8 12.8-25.6 12.8-38.4 0L422.4 531.2c-12.8-12.8-12.8-25.6 0-38.4l6.4-6.4C441.6 473.6 454.4 473.6 467.2 486.4z"  ></path>' + '' + '<path d="M627.2 179.2 268.8 537.6C256 550.4 243.2 550.4 230.4 537.6L224 531.2c-12.8-12.8-12.8-25.6 0-38.4l358.4-358.4c12.8-12.8 25.6-12.8 38.4 0l6.4 6.4C640 153.6 640 166.4 627.2 179.2z"  ></path>' + '' + '<path d="M268.8 486.4l358.4 358.4c12.8 12.8 12.8 25.6 0 38.4l-6.4 6.4c-12.8 12.8-25.6 12.8-38.4 0L224 531.2c-12.8-12.8-12.8-25.6 0-38.4l6.4-6.4C243.2 473.6 256 473.6 268.8 486.4z"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-shuangxianzuojiantou" viewBox="0 0 1024 1024">' + '' + '<path d="M224 844.8l358.4-358.4c12.8-12.8 25.6-12.8 38.4 0l6.4 6.4c12.8 12.8 12.8 25.6 0 38.4l-358.4 358.4c-12.8 12.8-25.6 12.8-38.4 0l-6.4-6.4C211.2 870.4 211.2 857.6 224 844.8z"  ></path>' + '' + '<path d="M582.4 537.6 224 179.2c-12.8-12.8-12.8-25.6 0-38.4l6.4-6.4c12.8-12.8 25.6-12.8 38.4 0l358.4 358.4c12.8 12.8 12.8 25.6 0 38.4L620.8 537.6C608 550.4 588.8 550.4 582.4 537.6z"  ></path>' + '' + '<path d="M422.4 844.8l358.4-358.4c12.8-12.8 25.6-12.8 38.4 0l6.4 6.4c12.8 12.8 12.8 25.6 0 38.4l-358.4 358.4c-12.8 12.8-25.6 12.8-38.4 0l-6.4-6.4C409.6 870.4 409.6 857.6 422.4 844.8z"  ></path>' + '' + '<path d="M780.8 537.6 422.4 179.2c-12.8-12.8-12.8-25.6 0-38.4l6.4-6.4c12.8-12.8 25.6-12.8 38.4 0l358.4 358.4c12.8 12.8 12.8 25.6 0 38.4l-6.4 6.4C806.4 550.4 793.6 550.4 780.8 537.6z"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-triangle-up" viewBox="0 0 1024 1024">' + '' + '<path d="M27.273 753.613l485.222-484.233 484.233 485.222z"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-sanjiao" viewBox="0 0 1024 1024">' + '' + '<path d="M966.432 285.488l-454.896 453.968-453.968-454.896z"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-shipin" viewBox="0 0 1024 1024">' + '' + '<path d="M841.58953 163.033144c-110.209054-0.048095-220.415039-0.01228-330.625116-0.01228s-220.418109-0.024559-330.625116 0.00614c-60.370972 0.01842-102.063537 39.495526-102.269221 99.403964-0.571005 165.839049-0.606821 331.684238 0.030699 497.526357 0.224104 58.765405 42.572608 99.134835 101.458763 99.158371 220.415039 0.088004 440.83417 0.075725 661.252279 0.00614 59.58098-0.01842 101.243869-41.525766 101.265358-100.754728 0.054235-164.782997 0.048095-329.565994 0.00307-494.347968C942.064896 204.030883 901.280004 163.060773 841.58953 163.033144zM890.584408 761.0144c-0.00614 21.615297-24.841781 46.63104-46.882773 46.63411-236.271168 0.039909-435.034071 0.039909-671.307286-0.00307-21.858844-0.00307-43.021839-19.673062-43.027979-41.450041-0.051165-180.647313-0.051165-325.941444 0-506.588757 0.00614-21.536502 28.29237-45.50438 50.282197-45.50745 118.136607-0.021489 212.302267-0.01228 330.439898-0.01228s218.585367-0.01228 336.721975 0.01228c21.828145 0.00614 43.771923 27.929096 43.778062 49.650817C890.635573 444.399369 890.638643 580.367087 890.584408 761.0144z"  ></path>' + '' + '<path d="M664.098093 491.700675c-40.187281-29.369911-80.519872-58.540278-120.777761-87.813998-36.405141-26.471908-109.432365-79.105662-109.432365-79.105662s-34.244942-10.009981-34.244942 22.061458c0 32.074509 0.081864 292.704458 0.081864 327.449797 0 34.748409 36.790928 21.036106 36.790928 21.036106s151.680585-110.196775 227.448222-165.399027C682.767292 516.233418 682.843016 505.403768 664.098093 491.700675zM609.594759 524.710486c-0.130983 0.097214-0.166799 0.169869-0.300852 0.267083-49.167816 35.883255-147.83193 107.198487-147.83193 107.198487l-1.648546 0.926092-25.786293 18.659989L434.027138 368.613312l195.634656 141.573389L609.594759 524.710486z"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-xiaoyinfu" viewBox="0 0 1024 1024">' + '' + '<path d="M831.245 298.318c-11.823 11.814-30.969 11.814-42.796 0l-147.615-145.366v575.33h-0.751c4.893 80.911-49.789 172.18-144.531 226.844-121.999 70.363-263.707 53.316-316.551-38.102-52.797-91.422 3.254-222.587 125.262-292.954 98.127-56.649 208.934-56.569 276.060-6.779v-523.873c0-16.544-2.283-31.077 6.7-39.104 12.452-11.108 30.963-11.805 42.769 0l201.424 201.275c11.823 11.79 11.823 30.923 0 42.741z"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-ego-heart" viewBox="0 0 1024 1024">' + '' + '<path d="M512 909.329l-11.312-7.069c-268.657-178.162-419.953-378.946-412.882-550.039 2.829-86.253 46.661-155.538 121.602-197.956 156.953-87.668 263.001 11.312 302.592 59.387 39.591-49.49 145.639-148.468 302.592-59.387v0c74.941 42.42 118.773 113.118 121.602 197.956 7.069 171.091-144.226 371.877-412.882 551.453l-11.312 5.655zM332.425 158.505c-29.694 0-65.043 8.484-103.22 29.694-62.215 35.349-98.979 93.323-101.806 165.437-2.829 73.527 29.694 270.069 383.188 509.033 354.909-238.963 386.017-435.506 383.188-509.033-2.829-70.7-38.177-130.086-101.806-165.437-168.263-93.323-261.585 62.215-264.415 69.285l-15.553 31.108-16.967-31.108c-4.242-4.242-60.801-98.979-162.608-98.979z"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-ego-heartfull" viewBox="0 0 1024 1024">' + '' + '<path d="M818.834 150.021c-196.543-110.29-306.834 82.010-306.834 82.010s-110.29-192.301-306.834-82.010-178.162 432.678 306.834 757.893c484.995-325.216 503.377-646.19 306.834-757.893z"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-asmkticon0229" viewBox="0 0 1024 1024">' + '' + '<path d="M512 128c-211.84 0-384 172.16-384 384s172.16 384 384 384 384-172.16 384-384S723.84 128 512 128zM512 857.6c-190.72 0-345.6-154.88-345.6-345.6s154.88-345.6 345.6-345.6 345.6 154.88 345.6 345.6S702.72 857.6 512 857.6z"  ></path>' + '' + '<path d="M654.72 489.6 454.4 374.4c-3.84-2.56-8.32-3.2-12.8-3.2-13.44 0-25.6 10.88-25.6 25.6l0 231.04c0 14.72 12.16 25.6 25.6 25.6 4.48 0 8.32-1.28 12.8-3.2l200.32-115.84C672 524.16 672 499.84 654.72 489.6zM454.4 605.44 454.4 418.56 616.32 512 454.4 605.44z"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-jiantou" viewBox="0 0 1024 1024">' + '' + '<path d="M292.38928 227.13202l381.365754 317.805136L673.755034 476.577233l-381.365754 317.805136c-18.877953 15.731286-21.428032 43.786249-5.696746 62.664202 15.731286 18.876929 43.785226 21.427008 62.663178 5.695722l381.365754-317.805136c21.347191-17.787108 21.347191-50.572816 0-68.359924l-381.365754-317.805136c-18.877953-15.731286-46.931892-13.180184-62.663178 5.695722C270.961248 183.345772 273.511327 211.400734 292.38928 227.13202L292.38928 227.13202z"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-angle-right-copy" viewBox="0 0 1024 1024">' + '' + '<path d="M671.807 927.804l-415.632-415.804 415.632-415.803 63.445 63.616-352.017 352.209 352.017 352.102z"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-angle-down" viewBox="0 0 1024 1024">' + '' + '<path d="M927.804 352.193l-415.804 415.632-415.803-415.632 63.616-63.445 352.209 352.017 352.102-352.017z"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-iconfontdanquxunhuan2eps" viewBox="0 0 1024 1024">' + '' + '<path d="M987.756 477.122c-11.646-113.361-80.128-215.937-180.243-270.32-17.846-9.727-40.938-0.545-47.227 18.805-8.758 26.607 14.848 38.042 33.236 49.791 39.959 25.541 73.284 61.333 95.849 102.999 47.227 87.073 44.668 195.637-6.739 280.256-50.758 83.442-143.173 135.593-240.82 135.593h-129.91c-28.853 0-43.806 36.114-23.398 56.539l91.253 91.253c30.238 30.238 76.931-16.778 46.793-46.799l-34.72-34.72h50.009c203.227-0.097 366.463-181.426 345.957-383.351-1.181-11.646 1.181 11.646 0 0v0zM641.685 230.946c20.723 0 45.616 7.584 59.508-12.817 13.898-20.305 0.545-49.044-24.043-51.602-21.475-2.25-51.062-7.691-64.115 14.637-12.602 21.695 3.636 49.79 28.63 49.79v0zM353.097 792.742c-147.341-15.075-259.847-146.921-252.478-294.675 7.476-147.77 133.445-267.108 281.201-267.108h129.91c28.853 0 43.803-36.219 23.398-56.539l-91.253-91.253c-30.137-30.137-77.036 16.656-46.799 46.799l34.72 34.72h-50.005c-208.769 0-373.847 190.817-344.367 397.243 14.63 102.252 75.755 194.461 164.117 247.989 43.906 26.607 93.593 43.283 144.66 48.501 42.518 4.176 49.461-61.333 6.839-65.708-9.404-0.972 18.157 1.914 0 0v0zM353.097 792.742z"  ></path>' + '' + '<path d="M607.379 649.879h-162.084v-30.869h63.353v-214.643l-64.961 18.817v-32.915l100.525-29.163v257.915h63.145v30.869zM607.379 649.879z"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-jiantoukongup" viewBox="0 0 1024 1024">' + '' + '<path d="M533.103 300.304c-0.973-0.486-1.824-1.338-2.797-1.703-17.758-8.514-39.651-5.717-53.882 9.365l-325.116 343.725c-17.758 18.731-16.907 48.287 1.824 66.045s48.287 16.907 66.045-1.824l291.79-308.453 296.047 307.236c17.881 18.609 47.436 19.096 66.045 1.216 9.487-9.122 14.351-21.407 14.352-33.57 0-11.676-4.378-23.353-13.137-32.353l-328.278-340.563c-0.608-0.608-1.581-0.851-2.189-1.581-0.487-0.487-0.851-0.973-1.338-1.581-2.797-2.797-6.203-4.135-9.365-5.959v0zM533.103 300.304z"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-wenjianjia" viewBox="0 0 1024 1024">' + '' + '<path d="M864 189.44l-213.312 0c-61.184 0-98.112-29.312-109.248-55.552C518.4 80 477.952 62.912 393.024 62.912L107.328 62.912C29.184 62.912 0 98.368 0 170.752L0 847.36c0 88.64 30.784 113.728 119.04 113.728L864 961.088c88.256 0 160-72.128 160-160.768L1024 350.208C1024 261.568 952.256 189.44 864 189.44L864 189.44 864 189.44zM983.424 800.32c0 53.184-66.496 125.888-119.424 125.888L119.04 926.208c-52.928 0-78.464-25.6-78.464-78.784L40.576 170.752C42.368 126.272 67.264 106.688 107.328 103.68l291.584 0c61.184 0 90.112 11.648 101.312 37.888 22.976 53.888 65.536 88.64 150.528 88.64l219.2 0c52.928 0 113.6 66.816 113.6 120L983.424 800.32 983.424 800.32 983.424 800.32zM694.528 554.496 533.184 554.496 533.184 392c0-18.304-2.944-33.344-20.864-33.344-17.92 0-20.864 15.04-20.864 33.344l0 162.432L329.472 554.432c-18.24 0-33.152 2.944-33.152 20.992 0 17.984 14.912 20.992 33.152 20.992l161.984 0 0 162.432c0 18.304 2.944 33.344 20.864 33.344 17.92 0 20.864-15.04 20.864-33.344L533.184 596.416l161.408 0c18.24 0 33.152-3.008 33.152-20.992C727.744 557.44 712.768 554.496 694.528 554.496L694.528 554.496 694.528 554.496zM937.792 85.12c0 11.904-9.6 21.568-21.44 21.568L615.744 106.688c-11.84 0-21.504-9.664-21.504-21.568l0 0c0-11.904 9.6-21.568 21.504-21.568l300.608 0C928.192 63.552 937.792 73.216 937.792 85.12L937.792 85.12 937.792 85.12z"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-suijibofangzhongzuo" viewBox="0 0 1024 1024">' + '' + '<path d="M53.952 384.384l249.344 0c9.152 0 25.152 6.848 29.76 11.456l43.456 43.456c16 16 41.152 16 57.216 0 16-16 16-41.152 0-57.216L390.272 338.624C369.664 318.016 333.056 302.016 303.296 302.016L53.952 302.016C31.104 302.016 12.8 320.32 12.8 343.168 12.8 366.08 31.104 384.384 53.952 384.384z"  ></path>' + '' + '<path d="M767.68 384.384l70.912 0 0 48.064c0 11.456 9.152 16 18.304 9.152l144.128-96.064c11.456-6.848 11.456-18.304 0-25.152l-144.128-96.064c-11.456-6.848-18.304-2.304-18.304 9.152l0 68.608-70.912 0c-61.76 0-141.824 34.304-185.28 77.76L376.512 590.208c-27.456 27.456-86.912 52.608-128.128 52.608L53.952 642.816c-22.848 0-41.152 18.304-41.152 41.152s18.304 38.912 41.152 38.912l194.432 0c61.76 0 141.824-34.304 185.28-77.76l205.888-210.432C667.008 409.536 726.528 384.384 767.68 384.384z"  ></path>' + '' + '<path d="M856.896 567.36c-11.456-6.848-18.304-2.304-18.304 9.152l0 64.064L705.92 640.576c-6.848 0-22.848-6.848-29.76-11.456L632.704 585.664c-16-16-41.152-16-57.216 0s-16 41.152 0 57.216l43.456 43.456c20.608 20.608 57.216 36.608 84.608 36.608l132.672 0 0 52.608c0 11.456 9.152 16 18.304 9.152l144.128-96.064c11.456-6.848 11.456-18.304 0-25.152L856.896 567.36z"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-shanchu" viewBox="0 0 1024 1024">' + '' + '<path d="M907.952704 213.968321 116.049614 213.968321c-14.124424 0-25.543282-11.418658-25.543282-25.543282 0-14.103838 11.418658-25.548678 25.543282-25.548678L907.952904 162.876362c14.125423 0 25.543082 11.44484 25.543082 25.548678C933.495986 202.549663 922.078327 213.968321 907.952704 213.968321L907.952704 213.968321zM652.496903 111.789998 371.504216 111.789998c-14.125623 0-25.548678-11.418658-25.548678-25.548678 0-14.098441 11.423055-25.544281 25.548678-25.544281l280.992687 0c14.131019 0 25.549677 11.446839 25.549677 25.544281C678.04658 100.37234 666.628922 111.789998 652.496903 111.789998L652.496903 111.789998zM397.047498 775.958892 397.047498 341.695123c0-14.102838 11.417659-25.548678 25.543082-25.548678 14.131019 0 25.548678 11.44584 25.548678 25.548678L448.139258 775.958892c0 14.12982-11.417659 25.548678-25.548678 25.548678C408.466156 801.50737 397.047498 790.089711 397.047498 775.958892L397.047498 775.958892zM575.862861 775.958892 575.862861 341.695123c0-14.102838 11.422056-25.548678 25.548678-25.548678 14.125623 0 25.543082 11.44584 25.543082 25.548678L626.954621 775.958892c0 14.12982-11.417659 25.548678-25.543082 25.548678C587.284917 801.50737 575.862861 790.089711 575.862861 775.958892L575.862861 775.958892zM218.233134 290.603363c14.126622 0 25.544281 11.446839 25.544281 25.543082l0 30.246293 0 97.481707 0 408.719288c0 28.202279 22.89048 51.094158 51.09176 51.094158l434.263769 0c28.20128 0 51.09176-22.891679 51.09176-51.094158L780.224704 443.874445l0-97.481707 0-30.246293c0-14.097442 11.417659-25.543082 25.544281-25.543082 14.12982 0 25.548678 11.446839 25.548678 25.543082l0 102.185918 0 25.542082L831.317663 878.143611c0 42.327902-34.309338 76.63724-76.636041 76.63724l-485.360925 0c-42.326702 0-76.636041-34.309338-76.636041-76.63724L192.684656 490.751463l0-46.877017 0-25.542082 0-102.185718C192.684656 302.050202 204.107711 290.603363 218.233134 290.603363L218.233134 290.603363z"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-swticonyinle2" viewBox="0 0 1026 1024">' + '' + '<path d="M1.024 225.32608l532.48 0 0 40.957952-532.48 0 0-40.957952ZM1.024 409.63584l532.48 0 0 40.957952-532.48 0 0-40.957952ZM1.024 593.944576l532.48 0 0 40.957952-532.48 0 0-40.957952ZM738.305024 249.8048 1025.024 286.763008C1025.024 81.975296 861.185024 41.017344 697.345024 0l0 30.138368 0 214.387712 0 533.72928c-24.51968 0-63.519744 0-126.200832 0-120.379392 0-160.519168 63.695872-160.519168 121.872384 0 49.3568 36.938752 123.87328 163.84 123.87328 181.440512 0 163.84-145.672192 163.84-245.74464L738.305024 249.8048z"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-fangkuang" viewBox="0 0 1024 1024">' + '' + '<path d="M805.883819 65.269539 219.453642 65.269539c-85.741803 0-155.464771 68.424392-155.464771 152.530952l0 597.543282c0 84.050278 69.722968 152.473647 155.464771 152.473647l586.4312 0c85.683475 0 155.462724-68.423369 155.462724-152.473647L961.347566 217.800491C961.346543 133.693932 891.568317 65.269539 805.883819 65.269539zM895.178541 815.286468c0 47.554062-40.049135 86.306668-89.294722 86.306668L219.453642 901.593136c-49.300846 0-89.352027-38.695301-89.352027-86.306668L130.101615 217.743186c0-47.608298 40.050158-86.361927 89.352027-86.361927l0 0.056282 586.4312 0c49.245587 0 89.294722 38.753629 89.294722 86.36295L895.179564 815.286468z"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-jian" viewBox="0 0 1024 1024">' + '' + '<path d="M56.651 454.798h915.227v76.269h-915.227v-76.269z"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-bofangqibofang" viewBox="0 0 1024 1024">' + '' + '<path d="M927.99792 511.99744c0 35.199824-20.351898 65.91967-50.623747 82.623587l0 0-624.700876 415.357923c-0.255999 0.191999-0.575997 0.319998-0.831996 0.447998l-0.383998 0.255999 0 0C236.09738 1019.130904 218.177469 1023.99488 199.041565 1023.99488c-56.895716 0-103.039485-43.007785-103.039485-95.99952l0 0 0-831.99584 0 0C96.00208 43.007785 142.145849 0 199.041565 0c19.135904 0 37.055815 4.863976 52.415738 13.375933l0 0 0.383998 0.191999c0.255999 0.191999 0.511997 0.319998 0.831996 0.447998l624.700876 415.357923 0 0C907.646022 446.07777 927.99792 476.797616 927.99792 511.99744z"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-youjiantou-copy-copy" viewBox="0 0 1024 1024">' + '' + '<path d="M591.552 1019.072l-536.832-506.112 536.768-508.096 33.024 34.879-499.904 473.151 499.84 471.296z"  ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-weixuan" viewBox="0 0 1024 1024">' + '' + '<path d="M512 1024C229.239467 1024 0 794.760533 0 512 0 229.239467 229.239467 0 512 0c282.760533 0 512 229.239467 512 512 0 282.760533-229.239467 512-512 512z m0-955.733333C266.922667 68.266667 68.266667 266.922667 68.266667 512s198.656 443.733333 443.733333 443.733333 443.733333-198.656 443.733333-443.733333S757.077333 68.266667 512 68.266667z" fill="" ></path>' + '' + '</symbol>' + '' + '<symbol id="icon-xuanzhong" viewBox="0 0 1024 1024">' + '' + '<path d="M512 1024C229.239467 1024 0 794.760533 0 512 0 229.239467 229.239467 0 512 0c282.760533 0 512 229.239467 512 512 0 282.760533-229.239467 512-512 512z m325.870933-700.142933a49.595733 49.595733 0 0 0-74.274133 0L433.152 681.813333l-172.9536-187.357866a49.732267 49.732267 0 0 0-74.24 0 60.416 60.416 0 0 0 0 80.4864l210.056533 227.566933a50.517333 50.517333 0 0 0 37.137067 16.622933c13.4144 0 26.862933-5.563733 37.137067-16.622933l367.581866-398.267733c20.48-22.186667 20.48-58.197333 0-80.384z" fill="" ></path>' + '' + '</symbol>' + '' + '</svg>';
 	  var script = function () {
 	    var scripts = document.getElementsByTagName('script');
 	    return scripts[scripts.length - 1];
@@ -11227,7 +14066,7 @@
 	})(window);
 
 /***/ },
-/* 46 */
+/* 78 */
 /***/ function(module, exports, __webpack_require__) {
 
 	module.exports={render:function (){var _vm=this;
@@ -11242,22 +14081,22 @@
 	if (false) {
 	  module.hot.accept()
 	  if (module.hot.data) {
-	     require("vue-hot-reload-api").rerender("data-v-1c448786", module.exports)
+	     require("vue-hot-reload-api").rerender("data-v-7267b119", module.exports)
 	  }
 	}
 
 /***/ },
-/* 47 */
+/* 79 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var __vue_exports__, __vue_options__
 	var __vue_styles__ = {}
 
 	/* script */
-	__vue_exports__ = __webpack_require__(48)
+	__vue_exports__ = __webpack_require__(80)
 
 	/* template */
-	var __vue_template__ = __webpack_require__(49)
+	var __vue_template__ = __webpack_require__(81)
 	__vue_options__ = __vue_exports__ = __vue_exports__ || {}
 	if (
 	  typeof __vue_exports__.default === "object" ||
@@ -11269,7 +14108,7 @@
 	if (typeof __vue_options__ === "function") {
 	  __vue_options__ = __vue_options__.options
 	}
-	__vue_options__.__file = "E:\\workspace\\musicPlayer\\src\\app\\components\\header\\win-bar.vue"
+	__vue_options__.__file = "E:\\workspace\\my-music-player\\src\\app\\components\\header\\win-bar.vue"
 	__vue_options__.render = __vue_template__.render
 	__vue_options__.staticRenderFns = __vue_template__.staticRenderFns
 
@@ -11280,9 +14119,9 @@
 	  if (!hotAPI.compatible) return
 	  module.hot.accept()
 	  if (!module.hot.data) {
-	    hotAPI.createRecord("data-v-c9d296a0", __vue_options__)
+	    hotAPI.createRecord("data-v-5d877b58", __vue_options__)
 	  } else {
-	    hotAPI.reload("data-v-c9d296a0", __vue_options__)
+	    hotAPI.reload("data-v-5d877b58", __vue_options__)
 	  }
 	})()}
 	if (__vue_options__.functional) {console.error("[vue-loader] win-bar.vue: functional components are not supported and should be defined in plain js files using render functions.")}
@@ -11291,7 +14130,7 @@
 
 
 /***/ },
-/* 48 */
+/* 80 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -11300,7 +14139,7 @@
 		value: true
 	});
 
-	var _icon = __webpack_require__(43);
+	var _icon = __webpack_require__(75);
 
 	var _icon2 = _interopRequireDefault(_icon);
 
@@ -11334,7 +14173,7 @@
 	//
 
 /***/ },
-/* 49 */
+/* 81 */
 /***/ function(module, exports, __webpack_require__) {
 
 	module.exports={render:function (){var _vm=this;
@@ -11382,22 +14221,22 @@
 	if (false) {
 	  module.hot.accept()
 	  if (module.hot.data) {
-	     require("vue-hot-reload-api").rerender("data-v-c9d296a0", module.exports)
+	     require("vue-hot-reload-api").rerender("data-v-5d877b58", module.exports)
 	  }
 	}
 
 /***/ },
-/* 50 */
+/* 82 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var __vue_exports__, __vue_options__
 	var __vue_styles__ = {}
 
 	/* script */
-	__vue_exports__ = __webpack_require__(51)
+	__vue_exports__ = __webpack_require__(83)
 
 	/* template */
-	var __vue_template__ = __webpack_require__(52)
+	var __vue_template__ = __webpack_require__(87)
 	__vue_options__ = __vue_exports__ = __vue_exports__ || {}
 	if (
 	  typeof __vue_exports__.default === "object" ||
@@ -11409,7 +14248,7 @@
 	if (typeof __vue_options__ === "function") {
 	  __vue_options__ = __vue_options__.options
 	}
-	__vue_options__.__file = "E:\\workspace\\musicPlayer\\src\\app\\components\\header\\setting-bar.vue"
+	__vue_options__.__file = "E:\\workspace\\my-music-player\\src\\app\\components\\header\\setting-bar.vue"
 	__vue_options__.render = __vue_template__.render
 	__vue_options__.staticRenderFns = __vue_template__.staticRenderFns
 
@@ -11420,9 +14259,9 @@
 	  if (!hotAPI.compatible) return
 	  module.hot.accept()
 	  if (!module.hot.data) {
-	    hotAPI.createRecord("data-v-4c991824", __vue_options__)
+	    hotAPI.createRecord("data-v-97919870", __vue_options__)
 	  } else {
-	    hotAPI.reload("data-v-4c991824", __vue_options__)
+	    hotAPI.reload("data-v-97919870", __vue_options__)
 	  }
 	})()}
 	if (__vue_options__.functional) {console.error("[vue-loader] setting-bar.vue: functional components are not supported and should be defined in plain js files using render functions.")}
@@ -11431,7 +14270,7 @@
 
 
 /***/ },
-/* 51 */
+/* 83 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -11440,7 +14279,113 @@
 		value: true
 	});
 
-	var _icon = __webpack_require__(43);
+	var _icon = __webpack_require__(75);
+
+	var _icon2 = _interopRequireDefault(_icon);
+
+	var _themeModel = __webpack_require__(84);
+
+	var _themeModel2 = _interopRequireDefault(_themeModel);
+
+	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+	/* 主题弹框 */
+
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+
+	exports.default = {
+		data: function data() {
+			return {
+				uName: '简单系'
+			};
+		},
+
+		computed: {
+			showModel: function showModel() {
+				return this.$store.state.headerStore.themeModelShow;
+			}
+		},
+		methods: {
+			toggleShowThemeModel: function toggleShowThemeModel() {
+				this.$store.commit('toggleThemeModelShow', !this.showModel);
+			}
+		},
+		components: {
+			icon: _icon2.default,
+			themeModel: _themeModel2.default
+		}
+	}; /* 图标 */
+
+/***/ },
+/* 84 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var __vue_exports__, __vue_options__
+	var __vue_styles__ = {}
+
+	/* script */
+	__vue_exports__ = __webpack_require__(85)
+
+	/* template */
+	var __vue_template__ = __webpack_require__(86)
+	__vue_options__ = __vue_exports__ = __vue_exports__ || {}
+	if (
+	  typeof __vue_exports__.default === "object" ||
+	  typeof __vue_exports__.default === "function"
+	) {
+	if (Object.keys(__vue_exports__).some(function (key) { return key !== "default" && key !== "__esModule" })) {console.error("named exports are not supported in *.vue files.")}
+	__vue_options__ = __vue_exports__ = __vue_exports__.default
+	}
+	if (typeof __vue_options__ === "function") {
+	  __vue_options__ = __vue_options__.options
+	}
+	__vue_options__.__file = "E:\\workspace\\my-music-player\\src\\app\\components\\header\\theme-model.vue"
+	__vue_options__.render = __vue_template__.render
+	__vue_options__.staticRenderFns = __vue_template__.staticRenderFns
+
+	/* hot reload */
+	if (false) {(function () {
+	  var hotAPI = require("vue-hot-reload-api")
+	  hotAPI.install(require("vue"), false)
+	  if (!hotAPI.compatible) return
+	  module.hot.accept()
+	  if (!module.hot.data) {
+	    hotAPI.createRecord("data-v-4843f152", __vue_options__)
+	  } else {
+	    hotAPI.reload("data-v-4843f152", __vue_options__)
+	  }
+	})()}
+	if (__vue_options__.functional) {console.error("[vue-loader] theme-model.vue: functional components are not supported and should be defined in plain js files using render functions.")}
+
+	module.exports = __vue_exports__
+
+
+/***/ },
+/* 85 */
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+
+	Object.defineProperty(exports, "__esModule", {
+		value: true
+	});
+
+	var _icon = __webpack_require__(75);
 
 	var _icon2 = _interopRequireDefault(_icon);
 
@@ -11451,10 +14396,40 @@
 	exports.default = {
 		data: function data() {
 			return {
-				uName: '简单系'
+				onThemeTab: 1,
+				themeList: [{
+					name: '酷炫黑',
+					imgPath: '',
+					color: '#555'
+				}, {
+					name: '官方红',
+					imgPath: '',
+					color: 'rgb(198, 47, 47)'
+				}, {
+					name: '可爱粉',
+					imgPath: '',
+					color: 'rgb(248, 134, 175)'
+				}, {
+					name: '天际蓝',
+					imgPath: '',
+					color: 'rgb(68, 170, 248)'
+				}, {
+					name: '清新绿',
+					imgPath: '',
+					color: 'rgb(70, 191, 122)'
+				}, {
+					name: '土豪金',
+					imgPath: '',
+					color: 'rgb(216, 159, 85)'
+				}]
 			};
 		},
 
+		methods: {
+			teggleTab: function teggleTab(type) {
+				this.onThemeTab = type;
+			}
+		},
 		components: {
 			icon: _icon2.default
 		}
@@ -11469,41 +14444,177 @@
 	//
 	//
 	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
 
 /***/ },
-/* 52 */
+/* 86 */
 /***/ function(module, exports, __webpack_require__) {
 
 	module.exports={render:function (){var _vm=this;
-	  return _vm._h('div', [_vm._h('a', {
-	    staticClass: "left top-btn theme-btn",
+	  return _vm._h('div', {
+	    staticClass: "theme-style-model",
+	    on: {
+	      "click": function($event) {
+	        $event.stopPropagation();
+	      }
+	    }
+	  }, [_vm._h('ul', {
+	    staticClass: "theme-tab clearfix"
+	  }, [_vm._h('li', {
+	    staticClass: "theme-tab-item left",
+	    class: {
+	      active: _vm.onThemeTab == 1
+	    },
+	    on: {
+	      "click": function($event) {
+	        _vm.teggleTab(1)
+	      }
+	    }
+	  }, [_vm._h('a', {
 	    attrs: {
 	      "href": "javascript:;"
 	    }
+	  }, ["主题"])]), " ", _vm._h('li', {
+	    staticClass: "theme-tab-item left",
+	    class: {
+	      active: _vm.onThemeTab == 2
+	    },
+	    on: {
+	      "click": function($event) {
+	        _vm.teggleTab(2)
+	      }
+	    }
+	  }, [_vm._h('a', {
+	    attrs: {
+	      "href": "javascript:;"
+	    }
+	  }, ["纯色"])])]), " ", _vm._h('div', {
+	    directives: [{
+	      name: "show",
+	      rawName: "v-show",
+	      value: (_vm.onThemeTab == 1),
+	      expression: "onThemeTab == 1"
+	    }],
+	    staticClass: "theme-box"
+	  }, [_vm._h('ul', {
+	    staticClass: "theme-ul"
+	  }, [_vm._l((_vm.themeList), function(theme) {
+	    return _vm._h('li', {
+	      staticClass: "theme-item"
+	    }, [_vm._h('a', {
+	      staticClass: "theme-toggle-link",
+	      style: ({
+	        borderColor: theme.color
+	      }),
+	      attrs: {
+	        "href": "javascript:;"
+	      }
+	    }, [_vm._h('div', {
+	      staticClass: "theme-item-box",
+	      style: ({
+	        backgroundColor: theme.color
+	      })
+	    }, [_vm._h('span', {
+	      staticClass: "theme-name"
+	    }, [_vm._s(theme.name)])])])])
+	  })])]), " ", _vm._h('div', {
+	    directives: [{
+	      name: "show",
+	      rawName: "v-show",
+	      value: (_vm.onThemeTab == 2),
+	      expression: "onThemeTab == 2"
+	    }],
+	    staticClass: "theme-box"
+	  }, [_vm._h('iframe', {
+	    attrs: {
+	      "src": "../../../../src/app/player.html",
+	      "frameborder": "0"
+	    }
+	  })]), " ", _vm._h('i', {
+	    staticClass: "model-front"
+	  })])
+	},staticRenderFns: []}
+	if (false) {
+	  module.hot.accept()
+	  if (module.hot.data) {
+	     require("vue-hot-reload-api").rerender("data-v-4843f152", module.exports)
+	  }
+	}
+
+/***/ },
+/* 87 */
+/***/ function(module, exports, __webpack_require__) {
+
+	module.exports={render:function (){var _vm=this;
+	  return _vm._h('ul', [_vm._h('li', {
+	    staticClass: "left setting-bar-item"
+	  }, [_vm._h('a', {
+	    staticClass: "left top-btn theme-btn",
+	    attrs: {
+	      "href": "javascript:;"
+	    },
+	    on: {
+	      "click": function($event) {
+	        $event.stopPropagation();
+	        _vm.toggleShowThemeModel($event)
+	      }
+	    }
 	  }, [_vm._h('icon', {
+	    staticClass: "top-btn-icon",
 	    attrs: {
 	      "icon-href": "yifu"
 	    }
-	  })]), " ", _vm._h('router-link', {
+	  })]), " ", _vm._h('theme-model', {
+	    directives: [{
+	      name: "show",
+	      rawName: "v-show",
+	      value: (_vm.showModel),
+	      expression: "showModel"
+	    }]
+	  })]), " ", _vm._h('li', {
+	    staticClass: "left setting-bar-item"
+	  }, [_vm._h('router-link', {
 	    staticClass: "left top-btn setting-btn",
 	    attrs: {
 	      "to": "/setting"
 	    }
 	  }, [_vm._h('icon', {
+	    staticClass: "top-btn-icon",
 	    attrs: {
 	      "icon-href": "set"
 	    }
-	  })])])
+	  })])])])
 	},staticRenderFns: []}
 	if (false) {
 	  module.hot.accept()
 	  if (module.hot.data) {
-	     require("vue-hot-reload-api").rerender("data-v-4c991824", module.exports)
+	     require("vue-hot-reload-api").rerender("data-v-97919870", module.exports)
 	  }
 	}
 
 /***/ },
-/* 53 */
+/* 88 */
 /***/ function(module, exports, __webpack_require__) {
 
 	module.exports={render:function (){var _vm=this;
@@ -11527,6 +14638,11 @@
 	    staticClass: "page-left left",
 	    attrs: {
 	      "href": "javascript:;"
+	    },
+	    on: {
+	      "click": function($event) {
+	        _vm.pageHistory('back')
+	      }
 	    }
 	  }, [_vm._h('icon', {
 	    attrs: {
@@ -11536,6 +14652,11 @@
 	    staticClass: "page-right left",
 	    attrs: {
 	      "href": "javascript:;"
+	    },
+	    on: {
+	      "click": function($event) {
+	        _vm.pageHistory('forward')
+	      }
 	    }
 	  }, [_vm._h('icon', {
 	    attrs: {
@@ -11565,22 +14686,22 @@
 	if (false) {
 	  module.hot.accept()
 	  if (module.hot.data) {
-	     require("vue-hot-reload-api").rerender("data-v-ce6879ca", module.exports)
+	     require("vue-hot-reload-api").rerender("data-v-1955b7f7", module.exports)
 	  }
 	}
 
 /***/ },
-/* 54 */
+/* 89 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var __vue_exports__, __vue_options__
 	var __vue_styles__ = {}
 
 	/* script */
-	__vue_exports__ = __webpack_require__(55)
+	__vue_exports__ = __webpack_require__(90)
 
 	/* template */
-	var __vue_template__ = __webpack_require__(64)
+	var __vue_template__ = __webpack_require__(98)
 	__vue_options__ = __vue_exports__ = __vue_exports__ || {}
 	if (
 	  typeof __vue_exports__.default === "object" ||
@@ -11592,7 +14713,7 @@
 	if (typeof __vue_options__ === "function") {
 	  __vue_options__ = __vue_options__.options
 	}
-	__vue_options__.__file = "E:\\workspace\\musicPlayer\\src\\app\\components\\footer\\main.vue"
+	__vue_options__.__file = "E:\\workspace\\my-music-player\\src\\app\\components\\footer\\main.vue"
 	__vue_options__.render = __vue_template__.render
 	__vue_options__.staticRenderFns = __vue_template__.staticRenderFns
 
@@ -11603,9 +14724,9 @@
 	  if (!hotAPI.compatible) return
 	  module.hot.accept()
 	  if (!module.hot.data) {
-	    hotAPI.createRecord("data-v-3e037fcd", __vue_options__)
+	    hotAPI.createRecord("data-v-82e516ae", __vue_options__)
 	  } else {
-	    hotAPI.reload("data-v-3e037fcd", __vue_options__)
+	    hotAPI.reload("data-v-82e516ae", __vue_options__)
 	  }
 	})()}
 	if (__vue_options__.functional) {console.error("[vue-loader] main.vue: functional components are not supported and should be defined in plain js files using render functions.")}
@@ -11614,7 +14735,7 @@
 
 
 /***/ },
-/* 55 */
+/* 90 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -11623,27 +14744,73 @@
 		value: true
 	});
 
-	var _jquery = __webpack_require__(56);
+	var _jquery = __webpack_require__(91);
 
 	var _jquery2 = _interopRequireDefault(_jquery);
 
-	var _icon = __webpack_require__(43);
+	var _icon = __webpack_require__(75);
 
 	var _icon2 = _interopRequireDefault(_icon);
 
-	var _events = __webpack_require__(57);
-
-	var _events2 = _interopRequireDefault(_events);
-
-	var _player = __webpack_require__(58);
+	var _player = __webpack_require__(92);
 
 	var _player2 = _interopRequireDefault(_player);
 
-	var _playerList = __webpack_require__(61);
+	var _playerList = __webpack_require__(95);
 
 	var _playerList2 = _interopRequireDefault(_playerList);
 
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+
+	var playerTypeList = ['circulation', 'iconfontdanquxunhuan2eps', 'suijibofangzhongzuo', 'ttpodicon'];
 
 	exports.default = {
 		data: function data() {
@@ -11652,56 +14819,41 @@
 				playState: 'bofang1',
 				music: {},
 				musicList: [],
-				audio: new Audio()
+				songProgress: 50,
+				volumeProgress: 30,
+				playerType_index: 0,
+				cur_time: '00:00',
+				total_time: '00:00'
 			};
 		},
 
-		methods: {
-			changeMusicList: function changeMusicList(musicData) {
-				this.musicList = musicData.data.songList;
-				this.playerStart(this.musicList[0]);
+		computed: {
+			song: function song() {
+				// 当前播放音乐
+				return this.$store.state.song;
 			},
-			playerStart: function playerStart(music) {
-				this.music = music;
+			playerType: function playerType() {
+				// 播放模式
+				return playerTypeList[this.playerType_index];
+			}
+		},
+		methods: {
+			/**
+	   * 切换播放模式
+	   */
+			playerTypeToggle: function playerTypeToggle() {
+				this.playerType_index >= playerTypeList.length - 1 ? this.playerType_index = 0 : this.playerType_index += 1;
 			}
 		},
 		components: {
 			icon: _icon2.default,
 			player: _player2.default,
 			playerList: _playerList2.default
-		},
-		created: function created() {
-			_events2.default.$on('musicplayer', this.changeMusicList);
 		}
-	}; //
-	//
-	//
-	//
-	//
-	//
-	//
-	//
-	//
-	//
-	//
-	//
-	//
-	//
-	//
-	//
-	//
-	//
-	//
-	//
-	//
-	//
-	//
-	//
-	//
-	//
+	};
 
 /***/ },
-/* 56 */
+/* 91 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
@@ -21927,37 +25079,17 @@
 
 
 /***/ },
-/* 57 */
-/***/ function(module, exports, __webpack_require__) {
-
-	'use strict';
-
-	Object.defineProperty(exports, "__esModule", {
-	  value: true
-	});
-
-	var _vue = __webpack_require__(36);
-
-	var _vue2 = _interopRequireDefault(_vue);
-
-	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-	var eventVue = new _vue2.default();
-
-	exports.default = eventVue;
-
-/***/ },
-/* 58 */
+/* 92 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var __vue_exports__, __vue_options__
 	var __vue_styles__ = {}
 
 	/* script */
-	__vue_exports__ = __webpack_require__(59)
+	__vue_exports__ = __webpack_require__(93)
 
 	/* template */
-	var __vue_template__ = __webpack_require__(60)
+	var __vue_template__ = __webpack_require__(94)
 	__vue_options__ = __vue_exports__ = __vue_exports__ || {}
 	if (
 	  typeof __vue_exports__.default === "object" ||
@@ -21969,7 +25101,7 @@
 	if (typeof __vue_options__ === "function") {
 	  __vue_options__ = __vue_options__.options
 	}
-	__vue_options__.__file = "E:\\workspace\\musicPlayer\\src\\app\\components\\footer\\player.vue"
+	__vue_options__.__file = "E:\\workspace\\my-music-player\\src\\app\\components\\footer\\player.vue"
 	__vue_options__.render = __vue_template__.render
 	__vue_options__.staticRenderFns = __vue_template__.staticRenderFns
 
@@ -21980,9 +25112,9 @@
 	  if (!hotAPI.compatible) return
 	  module.hot.accept()
 	  if (!module.hot.data) {
-	    hotAPI.createRecord("data-v-6b4d31f5", __vue_options__)
+	    hotAPI.createRecord("data-v-1da5405e", __vue_options__)
 	  } else {
-	    hotAPI.reload("data-v-6b4d31f5", __vue_options__)
+	    hotAPI.reload("data-v-1da5405e", __vue_options__)
 	  }
 	})()}
 	if (__vue_options__.functional) {console.error("[vue-loader] player.vue: functional components are not supported and should be defined in plain js files using render functions.")}
@@ -21991,33 +25123,28 @@
 
 
 /***/ },
-/* 59 */
-/***/ function(module, exports, __webpack_require__) {
+/* 93 */
+/***/ function(module, exports) {
 
 	'use strict';
 
 	Object.defineProperty(exports, "__esModule", {
 		value: true
 	});
-
-	var _jquery = __webpack_require__(56);
-
-	var _jquery2 = _interopRequireDefault(_jquery);
-
-	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+	//
+	//
+	//
+	//
+	//
+	//
+	//
 
 	exports.default = {
 		props: ['musicSrc']
-	}; //
-	//
-	//
-	//
-	//
-	//
-	//
+	};
 
 /***/ },
-/* 60 */
+/* 94 */
 /***/ function(module, exports, __webpack_require__) {
 
 	module.exports={render:function (){var _vm=this;
@@ -22042,22 +25169,22 @@
 	if (false) {
 	  module.hot.accept()
 	  if (module.hot.data) {
-	     require("vue-hot-reload-api").rerender("data-v-6b4d31f5", module.exports)
+	     require("vue-hot-reload-api").rerender("data-v-1da5405e", module.exports)
 	  }
 	}
 
 /***/ },
-/* 61 */
+/* 95 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var __vue_exports__, __vue_options__
 	var __vue_styles__ = {}
 
 	/* script */
-	__vue_exports__ = __webpack_require__(62)
+	__vue_exports__ = __webpack_require__(96)
 
 	/* template */
-	var __vue_template__ = __webpack_require__(63)
+	var __vue_template__ = __webpack_require__(97)
 	__vue_options__ = __vue_exports__ = __vue_exports__ || {}
 	if (
 	  typeof __vue_exports__.default === "object" ||
@@ -22069,7 +25196,7 @@
 	if (typeof __vue_options__ === "function") {
 	  __vue_options__ = __vue_options__.options
 	}
-	__vue_options__.__file = "E:\\workspace\\musicPlayer\\src\\app\\components\\footer\\player-list.vue"
+	__vue_options__.__file = "E:\\workspace\\my-music-player\\src\\app\\components\\footer\\player-list.vue"
 	__vue_options__.render = __vue_template__.render
 	__vue_options__.staticRenderFns = __vue_template__.staticRenderFns
 
@@ -22080,9 +25207,9 @@
 	  if (!hotAPI.compatible) return
 	  module.hot.accept()
 	  if (!module.hot.data) {
-	    hotAPI.createRecord("data-v-46420bb4", __vue_options__)
+	    hotAPI.createRecord("data-v-447d15ca", __vue_options__)
 	  } else {
-	    hotAPI.reload("data-v-46420bb4", __vue_options__)
+	    hotAPI.reload("data-v-447d15ca", __vue_options__)
 	  }
 	})()}
 	if (__vue_options__.functional) {console.error("[vue-loader] player-list.vue: functional components are not supported and should be defined in plain js files using render functions.")}
@@ -22091,7 +25218,7 @@
 
 
 /***/ },
-/* 62 */
+/* 96 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -22100,20 +25227,32 @@
 		value: true
 	});
 
-	var _icon = __webpack_require__(43);
+	var _icon = __webpack_require__(75);
 
 	var _icon2 = _interopRequireDefault(_icon);
 
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 	exports.default = {
-		props: ['musicList'],
 		data: function data() {
-			return {};
+			return {
+				is_show: false
+			};
 		},
 
+		computed: {
+			playerList: function playerList() {
+				return this.$store.state.playerList;
+			}
+		},
 		methods: {
-			startPlayer: function startPlayer(info) {}
+			startPlayer: function startPlayer(info) {},
+			playerListToggle: function playerListToggle() {
+				this.is_show = !this.is_show;
+			}
+		},
+		components: {
+			icon: _icon2.default
 		}
 	}; //
 	//
@@ -22129,21 +25268,50 @@
 	//
 	//
 	//
+	//
+	//
+	//
+	//
+	//
+	//
 
 /***/ },
-/* 63 */
+/* 97 */
 /***/ function(module, exports, __webpack_require__) {
 
 	module.exports={render:function (){var _vm=this;
 	  return _vm._h('div', {
 	    staticClass: "player-list"
+	  }, [_vm._h('a', {
+	    staticClass: "player-list-open",
+	    attrs: {
+	      "href": "javascript:;"
+	    },
+	    on: {
+	      "click": _vm.playerListToggle
+	    }
+	  }, [_vm._h('span', {
+	    staticClass: "player-list-num"
+	  }, [_vm._s(_vm.playerList.length)]), " ", _vm._h('icon', {
+	    staticClass: "left player-list-icon",
+	    attrs: {
+	      "icon-href": "yinle1"
+	    }
+	  })]), " ", _vm._h('div', {
+	    directives: [{
+	      name: "show",
+	      rawName: "v-show",
+	      value: (_vm.is_show),
+	      expression: "is_show"
+	    }],
+	    staticClass: "player-list-dialog"
 	  }, [_vm._h('div', {
 	    staticClass: "f-top-bar"
 	  }, [_vm._h('span', {
 	    staticClass: "f-music-num"
-	  }, ["总" + _vm._s(_vm.musicList.length)])]), " ", _vm._h('ul', {
+	  }, ["总" + _vm._s(_vm.playerList.length)])]), " ", _vm._h('ul', {
 	    staticClass: "music-list"
-	  }, [_vm._l((_vm.musicList), function(music) {
+	  }, [_vm._l((_vm.playerList), function(music) {
 	    return _vm._h('li', {
 	      staticClass: "music-item",
 	      on: {
@@ -22156,17 +25324,17 @@
 	    }, [_vm._s(music.songName)]), " ", _vm._h('span', {
 	      staticClass: "f-music-singer"
 	    }, [_vm._s(music.artistName)])])
-	  })])])
+	  })])])])
 	},staticRenderFns: []}
 	if (false) {
 	  module.hot.accept()
 	  if (module.hot.data) {
-	     require("vue-hot-reload-api").rerender("data-v-46420bb4", module.exports)
+	     require("vue-hot-reload-api").rerender("data-v-447d15ca", module.exports)
 	  }
 	}
 
 /***/ },
-/* 64 */
+/* 98 */
 /***/ function(module, exports, __webpack_require__) {
 
 	module.exports={render:function (){var _vm=this;
@@ -22206,24 +25374,74 @@
 	    }
 	  })])]), " ", _vm._h('div', {
 	    staticClass: "music-plan-bar"
-	  }, [_vm._h('span', {
-	    staticClass: "player-now-time"
-	  }), " ", _vm._h('div', {
-	    staticClass: "plan-bar"
 	  }, [_vm._h('audio', {
 	    attrs: {
-	      "src": _vm.music.showLink,
+	      "src": _vm.song.showLink,
 	      "autoplay": "autoplay",
 	      "id": "music-player"
 	    }
 	  }, [_vm._h('source', {
 	    attrs: {
-	      "src": _vm.music.showLink,
+	      "src": _vm.song.showLink,
 	      "type": "audio/mpeg"
 	    }
-	  })])]), " ", _vm._h('span', {
-	    staticClass: "player-all-time"
-	  })]), " ", _vm._h('player-list', {
+	  })]), " ", _vm._h('div', {
+	    staticClass: "cur-time"
+	  }, ["\n\t\t\t" + _vm._s(_vm.cur_time) + "\n\t\t"]), " ", _vm._h('div', {
+	    staticClass: "song-progress"
+	  }, [_vm._h('div', {
+	    staticClass: "progress-bar theme-bg left",
+	    style: ({
+	      width: _vm.songProgress + '%'
+	    })
+	  }), " ", _vm._h('a', {
+	    staticClass: "progress-corner theme-fcolor left",
+	    attrs: {
+	      "href": "javascript:;"
+	    }
+	  })]), " ", _vm._h('div', {
+	    staticClass: "total-time"
+	  }, ["\n\t\t\t" + _vm._s(_vm.total_time) + "\n\t\t"]), " ", _vm._h('div', {
+	    staticClass: "song-control"
+	  }, [_vm._h('a', {
+	    staticClass: "volume-toggle",
+	    attrs: {
+	      "href": "javascript:;"
+	    }
+	  }, [_vm._h('icon', {
+	    attrs: {
+	      "icon-href": "yinliangzhong"
+	    }
+	  })]), " ", _vm._h('div', {
+	    staticClass: "volume-progress"
+	  }, [_vm._h('div', {
+	    staticClass: "volume-progress-val theme-bg left",
+	    style: ({
+	      width: _vm.volumeProgress + '%'
+	    })
+	  }), " ", _vm._h('a', {
+	    staticClass: "progress-corner theme-fcolor left",
+	    attrs: {
+	      "href": "javascript:;"
+	    }
+	  })]), " ", _vm._h('a', {
+	    staticClass: "player-type-toggle",
+	    attrs: {
+	      "href": "javascript:;"
+	    },
+	    on: {
+	      "click": _vm.playerTypeToggle
+	    }
+	  }, [_vm._h('icon', {
+	    attrs: {
+	      "icon-href": _vm.playerType
+	    }
+	  })]), " ", _vm._h('a', {
+	    staticClass: "lyric-open",
+	    attrs: {
+	      "href": "javascript:;"
+	    }
+	  }, ["词"])])]), " ", _vm._h('player-list', {
 	    attrs: {
 	      "music-list": _vm.musicList
 	    }
@@ -22232,17 +25450,20 @@
 	if (false) {
 	  module.hot.accept()
 	  if (module.hot.data) {
-	     require("vue-hot-reload-api").rerender("data-v-3e037fcd", module.exports)
+	     require("vue-hot-reload-api").rerender("data-v-82e516ae", module.exports)
 	  }
 	}
 
 /***/ },
-/* 65 */
+/* 99 */
 /***/ function(module, exports, __webpack_require__) {
 
 	module.exports={render:function (){var _vm=this;
 	  return _vm._h('div', {
-	    class: _vm.mainClass
+	    class: _vm.mainClass,
+	    on: {
+	      "click": _vm.globalClick
+	    }
 	  }, [_vm._h('header-main'), " ", _vm._h('div', {
 	    staticClass: "content"
 	  }, [_vm._h('router-view')]), " ", _vm._h('footer-main')])
@@ -22250,22 +25471,22 @@
 	if (false) {
 	  module.hot.accept()
 	  if (module.hot.data) {
-	     require("vue-hot-reload-api").rerender("data-v-ea001b90", module.exports)
+	     require("vue-hot-reload-api").rerender("data-v-472752dc", module.exports)
 	  }
 	}
 
 /***/ },
-/* 66 */
+/* 100 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var __vue_exports__, __vue_options__
 	var __vue_styles__ = {}
 
 	/* script */
-	__vue_exports__ = __webpack_require__(67)
+	__vue_exports__ = __webpack_require__(101)
 
 	/* template */
-	var __vue_template__ = __webpack_require__(74)
+	var __vue_template__ = __webpack_require__(111)
 	__vue_options__ = __vue_exports__ = __vue_exports__ || {}
 	if (
 	  typeof __vue_exports__.default === "object" ||
@@ -22277,7 +25498,7 @@
 	if (typeof __vue_options__ === "function") {
 	  __vue_options__ = __vue_options__.options
 	}
-	__vue_options__.__file = "E:\\workspace\\musicPlayer\\src\\app\\components\\music-page\\main.vue"
+	__vue_options__.__file = "E:\\workspace\\my-music-player\\src\\app\\components\\music-page\\main.vue"
 	__vue_options__.render = __vue_template__.render
 	__vue_options__.staticRenderFns = __vue_template__.staticRenderFns
 
@@ -22288,9 +25509,9 @@
 	  if (!hotAPI.compatible) return
 	  module.hot.accept()
 	  if (!module.hot.data) {
-	    hotAPI.createRecord("data-v-705f7a31", __vue_options__)
+	    hotAPI.createRecord("data-v-0228bde6", __vue_options__)
 	  } else {
-	    hotAPI.reload("data-v-705f7a31", __vue_options__)
+	    hotAPI.reload("data-v-0228bde6", __vue_options__)
 	  }
 	})()}
 	if (__vue_options__.functional) {console.error("[vue-loader] main.vue: functional components are not supported and should be defined in plain js files using render functions.")}
@@ -22299,7 +25520,7 @@
 
 
 /***/ },
-/* 67 */
+/* 101 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -22308,24 +25529,24 @@
 		value: true
 	});
 
-	var _jquery = __webpack_require__(56);
+	var _jquery = __webpack_require__(91);
 
 	var _jquery2 = _interopRequireDefault(_jquery);
 
-	var _icon = __webpack_require__(43);
+	var _icon = __webpack_require__(75);
 
 	var _icon2 = _interopRequireDefault(_icon);
 
-	var _leftMenuUl = __webpack_require__(68);
+	var _leftMenuUl = __webpack_require__(102);
 
 	var _leftMenuUl2 = _interopRequireDefault(_leftMenuUl);
 
+	var _musicInfoBar = __webpack_require__(105);
+
+	var _musicInfoBar2 = _interopRequireDefault(_musicInfoBar);
+
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
-	// import api from '../../api/api-main';
-
-	var dataList = __webpack_require__(71); //
-	//
 	//
 	//
 	//
@@ -22347,16 +25568,15 @@
 	//
 	//
 
-	var collectList = __webpack_require__(72);
-	var createList = __webpack_require__(73);
+	var left_init_width = '200px';
 
 	exports.default = {
 		data: function data() {
 			return {
-				leftWidth: '200px',
-				dataList: dataList,
-				collectList: collectList,
-				createList: createList,
+				leftWidth: left_init_width,
+				dataList: __webpack_require__(108),
+				collectList: __webpack_require__(109),
+				createList: __webpack_require__(110),
 				hideList: [],
 				toggleIcon: 'angle-down'
 			};
@@ -22383,22 +25603,23 @@
 		},
 		components: {
 			icon: _icon2.default,
-			leftMenu: _leftMenuUl2.default
+			leftMenu: _leftMenuUl2.default,
+			MusicInfoBar: _musicInfoBar2.default
 		}
 	};
 
 /***/ },
-/* 68 */
+/* 102 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var __vue_exports__, __vue_options__
 	var __vue_styles__ = {}
 
 	/* script */
-	__vue_exports__ = __webpack_require__(69)
+	__vue_exports__ = __webpack_require__(103)
 
 	/* template */
-	var __vue_template__ = __webpack_require__(70)
+	var __vue_template__ = __webpack_require__(104)
 	__vue_options__ = __vue_exports__ = __vue_exports__ || {}
 	if (
 	  typeof __vue_exports__.default === "object" ||
@@ -22410,7 +25631,7 @@
 	if (typeof __vue_options__ === "function") {
 	  __vue_options__ = __vue_options__.options
 	}
-	__vue_options__.__file = "E:\\workspace\\musicPlayer\\src\\app\\components\\music-page\\left-menu-ul.vue"
+	__vue_options__.__file = "E:\\workspace\\my-music-player\\src\\app\\components\\music-page\\left-menu-ul.vue"
 	__vue_options__.render = __vue_template__.render
 	__vue_options__.staticRenderFns = __vue_template__.staticRenderFns
 
@@ -22421,9 +25642,9 @@
 	  if (!hotAPI.compatible) return
 	  module.hot.accept()
 	  if (!module.hot.data) {
-	    hotAPI.createRecord("data-v-58d9bf77", __vue_options__)
+	    hotAPI.createRecord("data-v-2eaf4a53", __vue_options__)
 	  } else {
-	    hotAPI.reload("data-v-58d9bf77", __vue_options__)
+	    hotAPI.reload("data-v-2eaf4a53", __vue_options__)
 	  }
 	})()}
 	if (__vue_options__.functional) {console.error("[vue-loader] left-menu-ul.vue: functional components are not supported and should be defined in plain js files using render functions.")}
@@ -22432,7 +25653,7 @@
 
 
 /***/ },
-/* 69 */
+/* 103 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -22441,7 +25662,7 @@
 		value: true
 	});
 
-	var _icon = __webpack_require__(43);
+	var _icon = __webpack_require__(75);
 
 	var _icon2 = _interopRequireDefault(_icon);
 
@@ -22491,7 +25712,7 @@
 	//
 
 /***/ },
-/* 70 */
+/* 104 */
 /***/ function(module, exports, __webpack_require__) {
 
 	module.exports={render:function (){var _vm=this;
@@ -22539,12 +25760,180 @@
 	if (false) {
 	  module.hot.accept()
 	  if (module.hot.data) {
-	     require("vue-hot-reload-api").rerender("data-v-58d9bf77", module.exports)
+	     require("vue-hot-reload-api").rerender("data-v-2eaf4a53", module.exports)
 	  }
 	}
 
 /***/ },
-/* 71 */
+/* 105 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var __vue_exports__, __vue_options__
+	var __vue_styles__ = {}
+
+	/* script */
+	__vue_exports__ = __webpack_require__(106)
+
+	/* template */
+	var __vue_template__ = __webpack_require__(107)
+	__vue_options__ = __vue_exports__ = __vue_exports__ || {}
+	if (
+	  typeof __vue_exports__.default === "object" ||
+	  typeof __vue_exports__.default === "function"
+	) {
+	if (Object.keys(__vue_exports__).some(function (key) { return key !== "default" && key !== "__esModule" })) {console.error("named exports are not supported in *.vue files.")}
+	__vue_options__ = __vue_exports__ = __vue_exports__.default
+	}
+	if (typeof __vue_options__ === "function") {
+	  __vue_options__ = __vue_options__.options
+	}
+	__vue_options__.__file = "E:\\workspace\\my-music-player\\src\\app\\components\\music-page\\music-info\\music-info-bar.vue"
+	__vue_options__.render = __vue_template__.render
+	__vue_options__.staticRenderFns = __vue_template__.staticRenderFns
+
+	/* hot reload */
+	if (false) {(function () {
+	  var hotAPI = require("vue-hot-reload-api")
+	  hotAPI.install(require("vue"), false)
+	  if (!hotAPI.compatible) return
+	  module.hot.accept()
+	  if (!module.hot.data) {
+	    hotAPI.createRecord("data-v-1963503e", __vue_options__)
+	  } else {
+	    hotAPI.reload("data-v-1963503e", __vue_options__)
+	  }
+	})()}
+	if (__vue_options__.functional) {console.error("[vue-loader] music-info-bar.vue: functional components are not supported and should be defined in plain js files using render functions.")}
+
+	module.exports = __vue_exports__
+
+
+/***/ },
+/* 106 */
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+
+	Object.defineProperty(exports, "__esModule", {
+		value: true
+	});
+
+	var _icon = __webpack_require__(75);
+
+	var _icon2 = _interopRequireDefault(_icon);
+
+	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+	exports.default = {
+		data: function data() {
+			return {
+				name: 'asfs',
+				pic_default: '../src/img/song-small-default.png'
+			};
+		},
+
+		computed: {
+			song: function song() {
+				return this.$store.state.song;
+			}
+		},
+		methods: {
+			/**
+	   * 添加到“喜欢的音乐”
+	   */
+			addLike: function addLike() {}
+		},
+		components: {
+			icon: _icon2.default
+		}
+	}; //
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+
+/***/ },
+/* 107 */
+/***/ function(module, exports, __webpack_require__) {
+
+	module.exports={render:function (){var _vm=this;
+	  return _vm._h('div', {
+	    staticClass: "music-info-bar"
+	  }, [_vm._h('div', {
+	    staticClass: "song-pic-box"
+	  }, [_vm._h('img', {
+	    staticClass: "song-pic-small",
+	    attrs: {
+	      "src": _vm.song.songInfo && _vm.song.songInfo.songPicSmall || _vm.pic_default,
+	      "onerror": this.src = _vm.pic_default,
+	      "alt": ""
+	    }
+	  }), " ", _vm._h('div', {
+	    staticClass: "song-pic-icon"
+	  }, [_vm._h('icon', {
+	    attrs: {
+	      "icon-href": "quanping"
+	    }
+	  })])]), " ", _vm._h('div', {
+	    staticClass: "song-bar-info"
+	  }, [_vm._h('p', {
+	    staticClass: "music-bar-song-name"
+	  }, [_vm._h('span', {
+	    staticClass: "song-name-text text-hidden",
+	    attrs: {
+	      "title": _vm.song.songName
+	    }
+	  }, [_vm._s(_vm.song.songName)]), " ", _vm._h('a', {
+	    directives: [{
+	      name: "show",
+	      rawName: "v-show",
+	      value: (_vm.song.songName),
+	      expression: "song.songName"
+	    }],
+	    attrs: {
+	      "href": "javascript:;"
+	    },
+	    on: {
+	      "click": _vm.addLike
+	    }
+	  }, [_vm._h('icon', {
+	    staticClass: "right music-bar-like-icon",
+	    attrs: {
+	      "icon-href": "ego-heart"
+	    }
+	  })])]), " ", _vm._h('p', {
+	    staticClass: "music-bar-singer-name text-hidden",
+	    attrs: {
+	      "title": _vm.song.artistName
+	    }
+	  }, [_vm._s(_vm.song.artistName)])])])
+	},staticRenderFns: []}
+	if (false) {
+	  module.hot.accept()
+	  if (module.hot.data) {
+	     require("vue-hot-reload-api").rerender("data-v-1963503e", module.exports)
+	  }
+	}
+
+/***/ },
+/* 108 */
 /***/ function(module, exports) {
 
 	module.exports = {
@@ -22580,7 +25969,7 @@
 	};
 
 /***/ },
-/* 72 */
+/* 109 */
 /***/ function(module, exports) {
 
 	module.exports = [
@@ -22607,7 +25996,7 @@
 	];
 
 /***/ },
-/* 73 */
+/* 110 */
 /***/ function(module, exports) {
 
 	module.exports = [
@@ -22629,7 +26018,7 @@
 	];
 
 /***/ },
-/* 74 */
+/* 111 */
 /***/ function(module, exports, __webpack_require__) {
 
 	module.exports={render:function (){var _vm=this;
@@ -22673,7 +26062,7 @@
 	    on: {
 	      "mousedown": _vm.dragDown
 	    }
-	  })]), " ", _vm._h('div', {
+	  })]), " ", _vm._h('music-info-bar', {
 	    staticClass: "player-info"
 	  })]), " ", _vm._h('div', {
 	    staticClass: "main-info"
@@ -22684,22 +26073,22 @@
 	if (false) {
 	  module.hot.accept()
 	  if (module.hot.data) {
-	     require("vue-hot-reload-api").rerender("data-v-705f7a31", module.exports)
+	     require("vue-hot-reload-api").rerender("data-v-0228bde6", module.exports)
 	  }
 	}
 
 /***/ },
-/* 75 */
+/* 112 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var __vue_exports__, __vue_options__
 	var __vue_styles__ = {}
 
 	/* script */
-	__vue_exports__ = __webpack_require__(76)
+	__vue_exports__ = __webpack_require__(113)
 
 	/* template */
-	var __vue_template__ = __webpack_require__(77)
+	var __vue_template__ = __webpack_require__(114)
 	__vue_options__ = __vue_exports__ = __vue_exports__ || {}
 	if (
 	  typeof __vue_exports__.default === "object" ||
@@ -22711,7 +26100,7 @@
 	if (typeof __vue_options__ === "function") {
 	  __vue_options__ = __vue_options__.options
 	}
-	__vue_options__.__file = "E:\\workspace\\musicPlayer\\src\\app\\components\\setting-page\\main.vue"
+	__vue_options__.__file = "E:\\workspace\\my-music-player\\src\\app\\components\\setting-page\\main.vue"
 	__vue_options__.render = __vue_template__.render
 	__vue_options__.staticRenderFns = __vue_template__.staticRenderFns
 
@@ -22722,9 +26111,9 @@
 	  if (!hotAPI.compatible) return
 	  module.hot.accept()
 	  if (!module.hot.data) {
-	    hotAPI.createRecord("data-v-7e09885c", __vue_options__)
+	    hotAPI.createRecord("data-v-cbb12f90", __vue_options__)
 	  } else {
-	    hotAPI.reload("data-v-7e09885c", __vue_options__)
+	    hotAPI.reload("data-v-cbb12f90", __vue_options__)
 	  }
 	})()}
 	if (__vue_options__.functional) {console.error("[vue-loader] main.vue: functional components are not supported and should be defined in plain js files using render functions.")}
@@ -22733,7 +26122,7 @@
 
 
 /***/ },
-/* 76 */
+/* 113 */
 /***/ function(module, exports) {
 
 	'use strict';
@@ -22757,7 +26146,7 @@
 	};
 
 /***/ },
-/* 77 */
+/* 114 */
 /***/ function(module, exports, __webpack_require__) {
 
 	module.exports={render:function (){var _vm=this;
@@ -22768,22 +26157,22 @@
 	if (false) {
 	  module.hot.accept()
 	  if (module.hot.data) {
-	     require("vue-hot-reload-api").rerender("data-v-7e09885c", module.exports)
+	     require("vue-hot-reload-api").rerender("data-v-cbb12f90", module.exports)
 	  }
 	}
 
 /***/ },
-/* 78 */
+/* 115 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var __vue_exports__, __vue_options__
 	var __vue_styles__ = {}
 
 	/* script */
-	__vue_exports__ = __webpack_require__(79)
+	__vue_exports__ = __webpack_require__(116)
 
 	/* template */
-	var __vue_template__ = __webpack_require__(81)
+	var __vue_template__ = __webpack_require__(118)
 	__vue_options__ = __vue_exports__ = __vue_exports__ || {}
 	if (
 	  typeof __vue_exports__.default === "object" ||
@@ -22795,7 +26184,7 @@
 	if (typeof __vue_options__ === "function") {
 	  __vue_options__ = __vue_options__.options
 	}
-	__vue_options__.__file = "E:\\workspace\\musicPlayer\\src\\app\\components\\music-page\\music-main\\main.vue"
+	__vue_options__.__file = "E:\\workspace\\my-music-player\\src\\app\\components\\music-page\\music-main\\main.vue"
 	__vue_options__.render = __vue_template__.render
 	__vue_options__.staticRenderFns = __vue_template__.staticRenderFns
 
@@ -22806,9 +26195,9 @@
 	  if (!hotAPI.compatible) return
 	  module.hot.accept()
 	  if (!module.hot.data) {
-	    hotAPI.createRecord("data-v-1af1aa8c", __vue_options__)
+	    hotAPI.createRecord("data-v-381be230", __vue_options__)
 	  } else {
-	    hotAPI.reload("data-v-1af1aa8c", __vue_options__)
+	    hotAPI.reload("data-v-381be230", __vue_options__)
 	  }
 	})()}
 	if (__vue_options__.functional) {console.error("[vue-loader] main.vue: functional components are not supported and should be defined in plain js files using render functions.")}
@@ -22817,7 +26206,7 @@
 
 
 /***/ },
-/* 79 */
+/* 116 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -22826,7 +26215,7 @@
 		value: true
 	});
 
-	var _musicPageTab = __webpack_require__(80);
+	var _musicPageTab = __webpack_require__(117);
 
 	var _musicPageTab2 = _interopRequireDefault(_musicPageTab);
 
@@ -22854,7 +26243,7 @@
 	//
 
 /***/ },
-/* 80 */
+/* 117 */
 /***/ function(module, exports) {
 
 	module.exports = [
@@ -22885,7 +26274,7 @@
 	];
 
 /***/ },
-/* 81 */
+/* 118 */
 /***/ function(module, exports, __webpack_require__) {
 
 	module.exports={render:function (){var _vm=this;
@@ -22897,7 +26286,7 @@
 	    }, [_vm._h('router-link', {
 	      staticClass: "music-tab-link theme-fcolor-h-a theme-border-a",
 	      attrs: {
-	        "to": '/index/music-main/' + tab.link,
+	        "to": tab.link,
 	        "active-class": "active"
 	      }
 	    }, ["\n\t\t\t\t" + _vm._s(tab.name) + "\n\t\t\t"])])
@@ -22908,22 +26297,22 @@
 	if (false) {
 	  module.hot.accept()
 	  if (module.hot.data) {
-	     require("vue-hot-reload-api").rerender("data-v-1af1aa8c", module.exports)
+	     require("vue-hot-reload-api").rerender("data-v-381be230", module.exports)
 	  }
 	}
 
 /***/ },
-/* 82 */
+/* 119 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var __vue_exports__, __vue_options__
 	var __vue_styles__ = {}
 
 	/* script */
-	__vue_exports__ = __webpack_require__(83)
+	__vue_exports__ = __webpack_require__(120)
 
 	/* template */
-	var __vue_template__ = __webpack_require__(84)
+	var __vue_template__ = __webpack_require__(121)
 	__vue_options__ = __vue_exports__ = __vue_exports__ || {}
 	if (
 	  typeof __vue_exports__.default === "object" ||
@@ -22935,7 +26324,7 @@
 	if (typeof __vue_options__ === "function") {
 	  __vue_options__ = __vue_options__.options
 	}
-	__vue_options__.__file = "E:\\workspace\\musicPlayer\\src\\app\\components\\music-page\\radio.vue"
+	__vue_options__.__file = "E:\\workspace\\my-music-player\\src\\app\\components\\music-page\\radio.vue"
 	__vue_options__.render = __vue_template__.render
 	__vue_options__.staticRenderFns = __vue_template__.staticRenderFns
 
@@ -22946,9 +26335,9 @@
 	  if (!hotAPI.compatible) return
 	  module.hot.accept()
 	  if (!module.hot.data) {
-	    hotAPI.createRecord("data-v-7351d6b3", __vue_options__)
+	    hotAPI.createRecord("data-v-936ae952", __vue_options__)
 	  } else {
-	    hotAPI.reload("data-v-7351d6b3", __vue_options__)
+	    hotAPI.reload("data-v-936ae952", __vue_options__)
 	  }
 	})()}
 	if (__vue_options__.functional) {console.error("[vue-loader] radio.vue: functional components are not supported and should be defined in plain js files using render functions.")}
@@ -22957,7 +26346,7 @@
 
 
 /***/ },
-/* 83 */
+/* 120 */
 /***/ function(module, exports) {
 
 	"use strict";
@@ -22979,7 +26368,7 @@
 	};
 
 /***/ },
-/* 84 */
+/* 121 */
 /***/ function(module, exports, __webpack_require__) {
 
 	module.exports={render:function (){var _vm=this;
@@ -22990,22 +26379,22 @@
 	if (false) {
 	  module.hot.accept()
 	  if (module.hot.data) {
-	     require("vue-hot-reload-api").rerender("data-v-7351d6b3", module.exports)
+	     require("vue-hot-reload-api").rerender("data-v-936ae952", module.exports)
 	  }
 	}
 
 /***/ },
-/* 85 */
+/* 122 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var __vue_exports__, __vue_options__
 	var __vue_styles__ = {}
 
 	/* script */
-	__vue_exports__ = __webpack_require__(86)
+	__vue_exports__ = __webpack_require__(123)
 
 	/* template */
-	var __vue_template__ = __webpack_require__(87)
+	var __vue_template__ = __webpack_require__(124)
 	__vue_options__ = __vue_exports__ = __vue_exports__ || {}
 	if (
 	  typeof __vue_exports__.default === "object" ||
@@ -23017,7 +26406,7 @@
 	if (typeof __vue_options__ === "function") {
 	  __vue_options__ = __vue_options__.options
 	}
-	__vue_options__.__file = "E:\\workspace\\musicPlayer\\src\\app\\components\\music-page\\my-song-list.vue"
+	__vue_options__.__file = "E:\\workspace\\my-music-player\\src\\app\\components\\music-page\\my-song-list.vue"
 	__vue_options__.render = __vue_template__.render
 	__vue_options__.staticRenderFns = __vue_template__.staticRenderFns
 
@@ -23028,9 +26417,9 @@
 	  if (!hotAPI.compatible) return
 	  module.hot.accept()
 	  if (!module.hot.data) {
-	    hotAPI.createRecord("data-v-d2bd3c26", __vue_options__)
+	    hotAPI.createRecord("data-v-6c76ecc9", __vue_options__)
 	  } else {
-	    hotAPI.reload("data-v-d2bd3c26", __vue_options__)
+	    hotAPI.reload("data-v-6c76ecc9", __vue_options__)
 	  }
 	})()}
 	if (__vue_options__.functional) {console.error("[vue-loader] my-song-list.vue: functional components are not supported and should be defined in plain js files using render functions.")}
@@ -23039,7 +26428,7 @@
 
 
 /***/ },
-/* 86 */
+/* 123 */
 /***/ function(module, exports) {
 
 	"use strict";
@@ -23068,7 +26457,7 @@
 	};
 
 /***/ },
-/* 87 */
+/* 124 */
 /***/ function(module, exports, __webpack_require__) {
 
 	module.exports={render:function (){var _vm=this;
@@ -23081,22 +26470,22 @@
 	if (false) {
 	  module.hot.accept()
 	  if (module.hot.data) {
-	     require("vue-hot-reload-api").rerender("data-v-d2bd3c26", module.exports)
+	     require("vue-hot-reload-api").rerender("data-v-6c76ecc9", module.exports)
 	  }
 	}
 
 /***/ },
-/* 88 */
+/* 125 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var __vue_exports__, __vue_options__
 	var __vue_styles__ = {}
 
 	/* script */
-	__vue_exports__ = __webpack_require__(89)
+	__vue_exports__ = __webpack_require__(126)
 
 	/* template */
-	var __vue_template__ = __webpack_require__(90)
+	var __vue_template__ = __webpack_require__(127)
 	__vue_options__ = __vue_exports__ = __vue_exports__ || {}
 	if (
 	  typeof __vue_exports__.default === "object" ||
@@ -23108,7 +26497,7 @@
 	if (typeof __vue_options__ === "function") {
 	  __vue_options__ = __vue_options__.options
 	}
-	__vue_options__.__file = "E:\\workspace\\musicPlayer\\src\\app\\components\\my-music\\local-music.vue"
+	__vue_options__.__file = "E:\\workspace\\my-music-player\\src\\app\\components\\my-music\\local-music.vue"
 	__vue_options__.render = __vue_template__.render
 	__vue_options__.staticRenderFns = __vue_template__.staticRenderFns
 
@@ -23119,9 +26508,9 @@
 	  if (!hotAPI.compatible) return
 	  module.hot.accept()
 	  if (!module.hot.data) {
-	    hotAPI.createRecord("data-v-756418c8", __vue_options__)
+	    hotAPI.createRecord("data-v-6de9db6c", __vue_options__)
 	  } else {
-	    hotAPI.reload("data-v-756418c8", __vue_options__)
+	    hotAPI.reload("data-v-6de9db6c", __vue_options__)
 	  }
 	})()}
 	if (__vue_options__.functional) {console.error("[vue-loader] local-music.vue: functional components are not supported and should be defined in plain js files using render functions.")}
@@ -23130,7 +26519,7 @@
 
 
 /***/ },
-/* 89 */
+/* 126 */
 /***/ function(module, exports) {
 
 	'use strict';
@@ -23154,7 +26543,7 @@
 	};
 
 /***/ },
-/* 90 */
+/* 127 */
 /***/ function(module, exports, __webpack_require__) {
 
 	module.exports={render:function (){var _vm=this;
@@ -23165,22 +26554,22 @@
 	if (false) {
 	  module.hot.accept()
 	  if (module.hot.data) {
-	     require("vue-hot-reload-api").rerender("data-v-756418c8", module.exports)
+	     require("vue-hot-reload-api").rerender("data-v-6de9db6c", module.exports)
 	  }
 	}
 
 /***/ },
-/* 91 */
+/* 128 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var __vue_exports__, __vue_options__
 	var __vue_styles__ = {}
 
 	/* script */
-	__vue_exports__ = __webpack_require__(92)
+	__vue_exports__ = __webpack_require__(129)
 
 	/* template */
-	var __vue_template__ = __webpack_require__(93)
+	var __vue_template__ = __webpack_require__(130)
 	__vue_options__ = __vue_exports__ = __vue_exports__ || {}
 	if (
 	  typeof __vue_exports__.default === "object" ||
@@ -23192,7 +26581,7 @@
 	if (typeof __vue_options__ === "function") {
 	  __vue_options__ = __vue_options__.options
 	}
-	__vue_options__.__file = "E:\\workspace\\musicPlayer\\src\\app\\components\\my-music\\download-manage.vue"
+	__vue_options__.__file = "E:\\workspace\\my-music-player\\src\\app\\components\\my-music\\download-manage.vue"
 	__vue_options__.render = __vue_template__.render
 	__vue_options__.staticRenderFns = __vue_template__.staticRenderFns
 
@@ -23203,9 +26592,9 @@
 	  if (!hotAPI.compatible) return
 	  module.hot.accept()
 	  if (!module.hot.data) {
-	    hotAPI.createRecord("data-v-4a3c2062", __vue_options__)
+	    hotAPI.createRecord("data-v-80847f1a", __vue_options__)
 	  } else {
-	    hotAPI.reload("data-v-4a3c2062", __vue_options__)
+	    hotAPI.reload("data-v-80847f1a", __vue_options__)
 	  }
 	})()}
 	if (__vue_options__.functional) {console.error("[vue-loader] download-manage.vue: functional components are not supported and should be defined in plain js files using render functions.")}
@@ -23214,7 +26603,7 @@
 
 
 /***/ },
-/* 92 */
+/* 129 */
 /***/ function(module, exports) {
 
 	'use strict';
@@ -23238,7 +26627,7 @@
 	};
 
 /***/ },
-/* 93 */
+/* 130 */
 /***/ function(module, exports, __webpack_require__) {
 
 	module.exports={render:function (){var _vm=this;
@@ -23249,22 +26638,22 @@
 	if (false) {
 	  module.hot.accept()
 	  if (module.hot.data) {
-	     require("vue-hot-reload-api").rerender("data-v-4a3c2062", module.exports)
+	     require("vue-hot-reload-api").rerender("data-v-80847f1a", module.exports)
 	  }
 	}
 
 /***/ },
-/* 94 */
+/* 131 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var __vue_exports__, __vue_options__
 	var __vue_styles__ = {}
 
 	/* script */
-	__vue_exports__ = __webpack_require__(95)
+	__vue_exports__ = __webpack_require__(132)
 
 	/* template */
-	var __vue_template__ = __webpack_require__(96)
+	var __vue_template__ = __webpack_require__(133)
 	__vue_options__ = __vue_exports__ = __vue_exports__ || {}
 	if (
 	  typeof __vue_exports__.default === "object" ||
@@ -23276,7 +26665,7 @@
 	if (typeof __vue_options__ === "function") {
 	  __vue_options__ = __vue_options__.options
 	}
-	__vue_options__.__file = "E:\\workspace\\musicPlayer\\src\\app\\components\\my-music\\my-singer.vue"
+	__vue_options__.__file = "E:\\workspace\\my-music-player\\src\\app\\components\\my-music\\my-singer.vue"
 	__vue_options__.render = __vue_template__.render
 	__vue_options__.staticRenderFns = __vue_template__.staticRenderFns
 
@@ -23287,9 +26676,9 @@
 	  if (!hotAPI.compatible) return
 	  module.hot.accept()
 	  if (!module.hot.data) {
-	    hotAPI.createRecord("data-v-a096f6fc", __vue_options__)
+	    hotAPI.createRecord("data-v-1752a026", __vue_options__)
 	  } else {
-	    hotAPI.reload("data-v-a096f6fc", __vue_options__)
+	    hotAPI.reload("data-v-1752a026", __vue_options__)
 	  }
 	})()}
 	if (__vue_options__.functional) {console.error("[vue-loader] my-singer.vue: functional components are not supported and should be defined in plain js files using render functions.")}
@@ -23298,7 +26687,7 @@
 
 
 /***/ },
-/* 95 */
+/* 132 */
 /***/ function(module, exports) {
 
 	'use strict';
@@ -23322,7 +26711,7 @@
 	};
 
 /***/ },
-/* 96 */
+/* 133 */
 /***/ function(module, exports, __webpack_require__) {
 
 	module.exports={render:function (){var _vm=this;
@@ -23333,22 +26722,22 @@
 	if (false) {
 	  module.hot.accept()
 	  if (module.hot.data) {
-	     require("vue-hot-reload-api").rerender("data-v-a096f6fc", module.exports)
+	     require("vue-hot-reload-api").rerender("data-v-1752a026", module.exports)
 	  }
 	}
 
 /***/ },
-/* 97 */
+/* 134 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var __vue_exports__, __vue_options__
 	var __vue_styles__ = {}
 
 	/* script */
-	__vue_exports__ = __webpack_require__(98)
+	__vue_exports__ = __webpack_require__(135)
 
 	/* template */
-	var __vue_template__ = __webpack_require__(112)
+	var __vue_template__ = __webpack_require__(148)
 	__vue_options__ = __vue_exports__ = __vue_exports__ || {}
 	if (
 	  typeof __vue_exports__.default === "object" ||
@@ -23360,7 +26749,7 @@
 	if (typeof __vue_options__ === "function") {
 	  __vue_options__ = __vue_options__.options
 	}
-	__vue_options__.__file = "E:\\workspace\\musicPlayer\\src\\app\\components\\music-page\\music-main\\recommend\\main.vue"
+	__vue_options__.__file = "E:\\workspace\\my-music-player\\src\\app\\components\\music-page\\music-main\\recommend\\main.vue"
 	__vue_options__.render = __vue_template__.render
 	__vue_options__.staticRenderFns = __vue_template__.staticRenderFns
 
@@ -23371,9 +26760,9 @@
 	  if (!hotAPI.compatible) return
 	  module.hot.accept()
 	  if (!module.hot.data) {
-	    hotAPI.createRecord("data-v-0007a3ec", __vue_options__)
+	    hotAPI.createRecord("data-v-94c8c2e0", __vue_options__)
 	  } else {
-	    hotAPI.reload("data-v-0007a3ec", __vue_options__)
+	    hotAPI.reload("data-v-94c8c2e0", __vue_options__)
 	  }
 	})()}
 	if (__vue_options__.functional) {console.error("[vue-loader] main.vue: functional components are not supported and should be defined in plain js files using render functions.")}
@@ -23382,7 +26771,7 @@
 
 
 /***/ },
-/* 98 */
+/* 135 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -23391,19 +26780,19 @@
 		value: true
 	});
 
-	var _carousel = __webpack_require__(99);
+	var _carousel = __webpack_require__(136);
 
 	var _carousel2 = _interopRequireDefault(_carousel);
 
-	var _songMenu = __webpack_require__(102);
+	var _songMenu = __webpack_require__(139);
 
 	var _songMenu2 = _interopRequireDefault(_songMenu);
 
-	var _newMusic = __webpack_require__(106);
+	var _newMusic = __webpack_require__(142);
 
 	var _newMusic2 = _interopRequireDefault(_newMusic);
 
-	var _mv = __webpack_require__(109);
+	var _mv = __webpack_require__(145);
 
 	var _mv2 = _interopRequireDefault(_mv);
 
@@ -23422,9 +26811,7 @@
 	exports.default = {
 		data: function data() {
 			return {
-				title: '推荐',
-				carousel: [],
-				newMusic: []
+				title: '推荐'
 			};
 		},
 
@@ -23435,36 +26822,23 @@
 			Mv: _mv2.default
 		},
 		created: function created() {
-			var _this = this;
-
-			// api('mainPageData', data => {
-			// 	this.carousel = data.carousel;
-			// 	this.newMusic = data.newMusic;
-			// });
-			// this.$http.get('http://localhost:9900/mainPageData').then(({body}) => {
-			// 	({ carousel: this.carousel, newMusic: this.newMusic } = body);
-			// });
-
-			this.$api('mainPageData').then(function (_ref) {
-				var body = _ref.body;
-				_this.carousel = body.carousel;
-				_this.newMusic = body.newMusic;
-			});
+			/* 初始化首页数据 */
+			this.$store.dispatch('getMainPageData');
 		}
 	};
 
 /***/ },
-/* 99 */
+/* 136 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var __vue_exports__, __vue_options__
 	var __vue_styles__ = {}
 
 	/* script */
-	__vue_exports__ = __webpack_require__(100)
+	__vue_exports__ = __webpack_require__(137)
 
 	/* template */
-	var __vue_template__ = __webpack_require__(101)
+	var __vue_template__ = __webpack_require__(138)
 	__vue_options__ = __vue_exports__ = __vue_exports__ || {}
 	if (
 	  typeof __vue_exports__.default === "object" ||
@@ -23476,7 +26850,7 @@
 	if (typeof __vue_options__ === "function") {
 	  __vue_options__ = __vue_options__.options
 	}
-	__vue_options__.__file = "E:\\workspace\\musicPlayer\\src\\app\\components\\music-page\\music-main\\recommend\\carousel.vue"
+	__vue_options__.__file = "E:\\workspace\\my-music-player\\src\\app\\components\\music-page\\music-main\\recommend\\carousel.vue"
 	__vue_options__.render = __vue_template__.render
 	__vue_options__.staticRenderFns = __vue_template__.staticRenderFns
 
@@ -23487,9 +26861,9 @@
 	  if (!hotAPI.compatible) return
 	  module.hot.accept()
 	  if (!module.hot.data) {
-	    hotAPI.createRecord("data-v-c35d62da", __vue_options__)
+	    hotAPI.createRecord("data-v-1e5f5737", __vue_options__)
 	  } else {
-	    hotAPI.reload("data-v-c35d62da", __vue_options__)
+	    hotAPI.reload("data-v-1e5f5737", __vue_options__)
 	  }
 	})()}
 	if (__vue_options__.functional) {console.error("[vue-loader] carousel.vue: functional components are not supported and should be defined in plain js files using render functions.")}
@@ -23498,7 +26872,7 @@
 
 
 /***/ },
-/* 100 */
+/* 137 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -23507,51 +26881,11 @@
 		value: true
 	});
 
-	var _icon = __webpack_require__(43);
+	var _icon = __webpack_require__(75);
 
 	var _icon2 = _interopRequireDefault(_icon);
 
-	var _jquery = __webpack_require__(56);
-
-	var _jquery2 = _interopRequireDefault(_jquery);
-
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-	//
-	//
-	//
-	//
-	//
-	//
-	//
-	//
-	//
-	//
-	//
-	//
-	//
-	//
-	//
-	//
-	//
-	//
-	//
-	//
-	//
-	//
-	//
-	//
-	//
-	//
-	//
-	//
-	//
-	//
-	//
-	//
-	//
-	//
-	//
 
 	exports.default = {
 		data: function data() {
@@ -23564,11 +26898,15 @@
 			};
 		},
 
-		props: ['imgList'],
+		computed: {
+			carouselList: function carouselList() {
+				return this.$store.state.reStore.mainPage.carousel;
+			}
+		},
 		methods: {
 			indexModified: function indexModified(type, name) {
 				var current = this.showImgIndex.current,
-				    len = this.imgList.length;
+				    len = this.carouselList.length;
 
 				if (type) {
 					current <= 0 ? this.showImgIndex[name] = len - 1 : this.showImgIndex[name] = current - 1;
@@ -23604,10 +26942,44 @@
 				_this.imgToggle(false);
 			}, 5000);
 		}
-	};
+	}; //
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
 
 /***/ },
-/* 101 */
+/* 138 */
 /***/ function(module, exports, __webpack_require__) {
 
 	module.exports={render:function (){var _vm=this;
@@ -23617,7 +26989,7 @@
 	    staticClass: "carousel-img"
 	  }, [_vm._h('ul', {
 	    staticClass: "carousel-img-list"
-	  }, [_vm._l((_vm.imgList), function(img, index) {
+	  }, [_vm._l((_vm.carouselList), function(img, index) {
 	    return _vm._h('li', {
 	      class: {
 	        'carousel-item': true,
@@ -23667,7 +27039,7 @@
 	    }
 	  })])]), " ", _vm._h('ul', {
 	    staticClass: "carousel-page"
-	  }, [_vm._l((_vm.imgList), function(info, index) {
+	  }, [_vm._l((_vm.carouselList), function(info, index) {
 	    return _vm._h('li', {
 	      class: {
 	        'carousel-page-item': true,
@@ -23689,22 +27061,22 @@
 	if (false) {
 	  module.hot.accept()
 	  if (module.hot.data) {
-	     require("vue-hot-reload-api").rerender("data-v-c35d62da", module.exports)
+	     require("vue-hot-reload-api").rerender("data-v-1e5f5737", module.exports)
 	  }
 	}
 
 /***/ },
-/* 102 */
+/* 139 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var __vue_exports__, __vue_options__
 	var __vue_styles__ = {}
 
 	/* script */
-	__vue_exports__ = __webpack_require__(103)
+	__vue_exports__ = __webpack_require__(140)
 
 	/* template */
-	var __vue_template__ = __webpack_require__(105)
+	var __vue_template__ = __webpack_require__(141)
 	__vue_options__ = __vue_exports__ = __vue_exports__ || {}
 	if (
 	  typeof __vue_exports__.default === "object" ||
@@ -23716,7 +27088,7 @@
 	if (typeof __vue_options__ === "function") {
 	  __vue_options__ = __vue_options__.options
 	}
-	__vue_options__.__file = "E:\\workspace\\musicPlayer\\src\\app\\components\\music-page\\music-main\\recommend\\song-menu.vue"
+	__vue_options__.__file = "E:\\workspace\\my-music-player\\src\\app\\components\\music-page\\music-main\\recommend\\song-menu.vue"
 	__vue_options__.render = __vue_template__.render
 	__vue_options__.staticRenderFns = __vue_template__.staticRenderFns
 
@@ -23727,9 +27099,9 @@
 	  if (!hotAPI.compatible) return
 	  module.hot.accept()
 	  if (!module.hot.data) {
-	    hotAPI.createRecord("data-v-6e8cdef4", __vue_options__)
+	    hotAPI.createRecord("data-v-1f802a60", __vue_options__)
 	  } else {
-	    hotAPI.reload("data-v-6e8cdef4", __vue_options__)
+	    hotAPI.reload("data-v-1f802a60", __vue_options__)
 	  }
 	})()}
 	if (__vue_options__.functional) {console.error("[vue-loader] song-menu.vue: functional components are not supported and should be defined in plain js files using render functions.")}
@@ -23738,7 +27110,7 @@
 
 
 /***/ },
-/* 103 */
+/* 140 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -23747,80 +27119,63 @@
 		value: true
 	});
 
-	var _icon = __webpack_require__(43);
+	var _icon = __webpack_require__(75);
 
 	var _icon2 = _interopRequireDefault(_icon);
 
-	var _events = __webpack_require__(57);
-
-	var _events2 = _interopRequireDefault(_events);
-
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
-	//
-	//
-	//
-	//
-	//
-	//
-	//
-	//
-	//
-	//
-	//
-	//
-	//
-	//
-	//
-	//
-	//
-	//
-	//
-	//
-	//
-	//
-	//
-	//
-	//
-	//
-	//
-	//
-	//
-	//
-
 	exports.default = {
-		data: function data() {
-			return {
-				songlist: []
-			};
+		computed: {
+			songlist: function songlist() {
+				return this.$store.state.reStore.mainPage.songlist;
+			}
 		},
-
 		methods: {
 			startMusic: function startMusic(id) {
-				this.$api('songmusiclist?id=' + id).then(function (_ref) {
-					var body = _ref.body;
-
-					_events2.default.$emit('musicplayer', body);
-				});
+				this.$store.dispatch('getSongListIds', id);
 			}
 		},
 		components: {
 			icon: _icon2.default
 		},
 		created: function created() {
-			var _this = this;
-
-			this.$api('songlist?limit=10').then(function (_ref2) {
-				var body = _ref2.body;
-
-				_this.songlist = body;
-			});
+			/* 初始化首页歌单列表 */
+			this.$store.dispatch('getMainSongList');
 		}
-	};
+	}; //
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
+	//
 
 /***/ },
-/* 104 */,
-/* 105 */
+/* 141 */
 /***/ function(module, exports, __webpack_require__) {
 
 	module.exports={render:function (){var _vm=this;
@@ -23884,22 +27239,22 @@
 	if (false) {
 	  module.hot.accept()
 	  if (module.hot.data) {
-	     require("vue-hot-reload-api").rerender("data-v-6e8cdef4", module.exports)
+	     require("vue-hot-reload-api").rerender("data-v-1f802a60", module.exports)
 	  }
 	}
 
 /***/ },
-/* 106 */
+/* 142 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var __vue_exports__, __vue_options__
 	var __vue_styles__ = {}
 
 	/* script */
-	__vue_exports__ = __webpack_require__(107)
+	__vue_exports__ = __webpack_require__(143)
 
 	/* template */
-	var __vue_template__ = __webpack_require__(108)
+	var __vue_template__ = __webpack_require__(144)
 	__vue_options__ = __vue_exports__ = __vue_exports__ || {}
 	if (
 	  typeof __vue_exports__.default === "object" ||
@@ -23911,7 +27266,7 @@
 	if (typeof __vue_options__ === "function") {
 	  __vue_options__ = __vue_options__.options
 	}
-	__vue_options__.__file = "E:\\workspace\\musicPlayer\\src\\app\\components\\music-page\\music-main\\recommend\\new-music.vue"
+	__vue_options__.__file = "E:\\workspace\\my-music-player\\src\\app\\components\\music-page\\music-main\\recommend\\new-music.vue"
 	__vue_options__.render = __vue_template__.render
 	__vue_options__.staticRenderFns = __vue_template__.staticRenderFns
 
@@ -23922,9 +27277,9 @@
 	  if (!hotAPI.compatible) return
 	  module.hot.accept()
 	  if (!module.hot.data) {
-	    hotAPI.createRecord("data-v-f0ab19d6", __vue_options__)
+	    hotAPI.createRecord("data-v-095d7ef1", __vue_options__)
 	  } else {
-	    hotAPI.reload("data-v-f0ab19d6", __vue_options__)
+	    hotAPI.reload("data-v-095d7ef1", __vue_options__)
 	  }
 	})()}
 	if (__vue_options__.functional) {console.error("[vue-loader] new-music.vue: functional components are not supported and should be defined in plain js files using render functions.")}
@@ -23933,7 +27288,7 @@
 
 
 /***/ },
-/* 107 */
+/* 143 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -23942,14 +27297,19 @@
 		value: true
 	});
 
-	var _icon = __webpack_require__(43);
+	var _icon = __webpack_require__(75);
 
 	var _icon2 = _interopRequireDefault(_icon);
 
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 	exports.default = {
-		props: ['musicList'],
+		computed: {
+			/* 首页新歌列表 */
+			newMusicList: function newMusicList() {
+				return this.$store.state.reStore.mainPage.newMusicList;
+			}
+		},
 		components: {
 			icon: _icon2.default
 		}
@@ -23983,7 +27343,7 @@
 	//
 
 /***/ },
-/* 108 */
+/* 144 */
 /***/ function(module, exports, __webpack_require__) {
 
 	module.exports={render:function (){var _vm=this;
@@ -23998,7 +27358,7 @@
 	    }
 	  }, ["\n\t\t\t更多>\n\t\t"])]), " ", _vm._h('ul', {
 	    staticClass: "re-new-music-list"
-	  }, [_vm._l((_vm.musicList), function(music, index) {
+	  }, [_vm._l((_vm.newMusicList), function(music, index) {
 	    return _vm._h('li', {
 	      staticClass: "re-new-music-item"
 	    }, [_vm._h('span', {
@@ -24031,22 +27391,22 @@
 	if (false) {
 	  module.hot.accept()
 	  if (module.hot.data) {
-	     require("vue-hot-reload-api").rerender("data-v-f0ab19d6", module.exports)
+	     require("vue-hot-reload-api").rerender("data-v-095d7ef1", module.exports)
 	  }
 	}
 
 /***/ },
-/* 109 */
+/* 145 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var __vue_exports__, __vue_options__
 	var __vue_styles__ = {}
 
 	/* script */
-	__vue_exports__ = __webpack_require__(110)
+	__vue_exports__ = __webpack_require__(146)
 
 	/* template */
-	var __vue_template__ = __webpack_require__(111)
+	var __vue_template__ = __webpack_require__(147)
 	__vue_options__ = __vue_exports__ = __vue_exports__ || {}
 	if (
 	  typeof __vue_exports__.default === "object" ||
@@ -24058,7 +27418,7 @@
 	if (typeof __vue_options__ === "function") {
 	  __vue_options__ = __vue_options__.options
 	}
-	__vue_options__.__file = "E:\\workspace\\musicPlayer\\src\\app\\components\\music-page\\music-main\\recommend\\mv.vue"
+	__vue_options__.__file = "E:\\workspace\\my-music-player\\src\\app\\components\\music-page\\music-main\\recommend\\mv.vue"
 	__vue_options__.render = __vue_template__.render
 	__vue_options__.staticRenderFns = __vue_template__.staticRenderFns
 
@@ -24069,9 +27429,9 @@
 	  if (!hotAPI.compatible) return
 	  module.hot.accept()
 	  if (!module.hot.data) {
-	    hotAPI.createRecord("data-v-f51b02c8", __vue_options__)
+	    hotAPI.createRecord("data-v-ef665b80", __vue_options__)
 	  } else {
-	    hotAPI.reload("data-v-f51b02c8", __vue_options__)
+	    hotAPI.reload("data-v-ef665b80", __vue_options__)
 	  }
 	})()}
 	if (__vue_options__.functional) {console.error("[vue-loader] mv.vue: functional components are not supported and should be defined in plain js files using render functions.")}
@@ -24080,7 +27440,7 @@
 
 
 /***/ },
-/* 110 */
+/* 146 */
 /***/ function(module, exports) {
 
 	'use strict';
@@ -24114,24 +27474,19 @@
 	//
 
 	exports.default = {
-		data: function data() {
-			return {
-				mvList: []
-			};
+		computed: {
+			mvlist: function mvlist() {
+				return this.$store.state.reStore.mainPage.remvlist;
+			}
 		},
 		created: function created() {
-			var _this = this;
-
-			this.$api('remvlist').then(function (_ref) {
-				var body = _ref.body;
-
-				_this.mvList = body;
-			});
+			/* 初始化首页mv列表 */
+			this.$store.dispatch('getReMvList');
 		}
 	};
 
 /***/ },
-/* 111 */
+/* 147 */
 /***/ function(module, exports, __webpack_require__) {
 
 	module.exports={render:function (){var _vm=this;
@@ -24146,10 +27501,11 @@
 	    }
 	  }, ["\n\t\t\t更多>\n\t\t"])]), " ", _vm._h('ul', {
 	    staticClass: "re-mv-list"
-	  }, [_vm._l((_vm.mvList), function(mv) {
+	  }, [_vm._l((_vm.mvlist), function(mv) {
 	    return _vm._h('li', {
 	      staticClass: "re-mv-item"
 	    }, [_vm._h('router-link', {
+	      staticClass: "re-mv-link",
 	      attrs: {
 	        "to": "/"
 	      }
@@ -24169,44 +27525,36 @@
 	if (false) {
 	  module.hot.accept()
 	  if (module.hot.data) {
-	     require("vue-hot-reload-api").rerender("data-v-f51b02c8", module.exports)
+	     require("vue-hot-reload-api").rerender("data-v-ef665b80", module.exports)
 	  }
 	}
 
 /***/ },
-/* 112 */
+/* 148 */
 /***/ function(module, exports, __webpack_require__) {
 
 	module.exports={render:function (){var _vm=this;
-	  return _vm._h('div', [_vm._h('carousel', {
-	    attrs: {
-	      "img-list": _vm.carousel
-	    }
-	  }), " ", _vm._h('song-menu'), " ", _vm._h('new-music', {
-	    attrs: {
-	      "music-list": _vm.newMusic
-	    }
-	  }), " ", _vm._h('mv')])
+	  return _vm._h('div', [_vm._h('carousel'), " ", _vm._h('song-menu'), " ", _vm._h('new-music'), " ", _vm._h('mv')])
 	},staticRenderFns: []}
 	if (false) {
 	  module.hot.accept()
 	  if (module.hot.data) {
-	     require("vue-hot-reload-api").rerender("data-v-0007a3ec", module.exports)
+	     require("vue-hot-reload-api").rerender("data-v-94c8c2e0", module.exports)
 	  }
 	}
 
 /***/ },
-/* 113 */
+/* 149 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var __vue_exports__, __vue_options__
 	var __vue_styles__ = {}
 
 	/* script */
-	__vue_exports__ = __webpack_require__(114)
+	__vue_exports__ = __webpack_require__(150)
 
 	/* template */
-	var __vue_template__ = __webpack_require__(115)
+	var __vue_template__ = __webpack_require__(151)
 	__vue_options__ = __vue_exports__ = __vue_exports__ || {}
 	if (
 	  typeof __vue_exports__.default === "object" ||
@@ -24218,7 +27566,7 @@
 	if (typeof __vue_options__ === "function") {
 	  __vue_options__ = __vue_options__.options
 	}
-	__vue_options__.__file = "E:\\workspace\\musicPlayer\\src\\app\\components\\music-page\\music-main\\song-menu.vue"
+	__vue_options__.__file = "E:\\workspace\\my-music-player\\src\\app\\components\\music-page\\music-main\\song-menu.vue"
 	__vue_options__.render = __vue_template__.render
 	__vue_options__.staticRenderFns = __vue_template__.staticRenderFns
 
@@ -24229,9 +27577,9 @@
 	  if (!hotAPI.compatible) return
 	  module.hot.accept()
 	  if (!module.hot.data) {
-	    hotAPI.createRecord("data-v-38040758", __vue_options__)
+	    hotAPI.createRecord("data-v-6378eb30", __vue_options__)
 	  } else {
-	    hotAPI.reload("data-v-38040758", __vue_options__)
+	    hotAPI.reload("data-v-6378eb30", __vue_options__)
 	  }
 	})()}
 	if (__vue_options__.functional) {console.error("[vue-loader] song-menu.vue: functional components are not supported and should be defined in plain js files using render functions.")}
@@ -24240,7 +27588,7 @@
 
 
 /***/ },
-/* 114 */
+/* 150 */
 /***/ function(module, exports) {
 
 	"use strict";
@@ -24269,7 +27617,7 @@
 	};
 
 /***/ },
-/* 115 */
+/* 151 */
 /***/ function(module, exports, __webpack_require__) {
 
 	module.exports={render:function (){var _vm=this;
@@ -24282,22 +27630,22 @@
 	if (false) {
 	  module.hot.accept()
 	  if (module.hot.data) {
-	     require("vue-hot-reload-api").rerender("data-v-38040758", module.exports)
+	     require("vue-hot-reload-api").rerender("data-v-6378eb30", module.exports)
 	  }
 	}
 
 /***/ },
-/* 116 */
+/* 152 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var __vue_exports__, __vue_options__
 	var __vue_styles__ = {}
 
 	/* script */
-	__vue_exports__ = __webpack_require__(117)
+	__vue_exports__ = __webpack_require__(153)
 
 	/* template */
-	var __vue_template__ = __webpack_require__(118)
+	var __vue_template__ = __webpack_require__(154)
 	__vue_options__ = __vue_exports__ = __vue_exports__ || {}
 	if (
 	  typeof __vue_exports__.default === "object" ||
@@ -24309,7 +27657,7 @@
 	if (typeof __vue_options__ === "function") {
 	  __vue_options__ = __vue_options__.options
 	}
-	__vue_options__.__file = "E:\\workspace\\musicPlayer\\src\\app\\components\\music-page\\music-main\\anchor-radio.vue"
+	__vue_options__.__file = "E:\\workspace\\my-music-player\\src\\app\\components\\music-page\\music-main\\anchor-radio.vue"
 	__vue_options__.render = __vue_template__.render
 	__vue_options__.staticRenderFns = __vue_template__.staticRenderFns
 
@@ -24320,9 +27668,9 @@
 	  if (!hotAPI.compatible) return
 	  module.hot.accept()
 	  if (!module.hot.data) {
-	    hotAPI.createRecord("data-v-6f1863b6", __vue_options__)
+	    hotAPI.createRecord("data-v-71f2b75a", __vue_options__)
 	  } else {
-	    hotAPI.reload("data-v-6f1863b6", __vue_options__)
+	    hotAPI.reload("data-v-71f2b75a", __vue_options__)
 	  }
 	})()}
 	if (__vue_options__.functional) {console.error("[vue-loader] anchor-radio.vue: functional components are not supported and should be defined in plain js files using render functions.")}
@@ -24331,7 +27679,7 @@
 
 
 /***/ },
-/* 117 */
+/* 153 */
 /***/ function(module, exports) {
 
 	"use strict";
@@ -24353,7 +27701,7 @@
 	};
 
 /***/ },
-/* 118 */
+/* 154 */
 /***/ function(module, exports, __webpack_require__) {
 
 	module.exports={render:function (){var _vm=this;
@@ -24366,22 +27714,22 @@
 	if (false) {
 	  module.hot.accept()
 	  if (module.hot.data) {
-	     require("vue-hot-reload-api").rerender("data-v-6f1863b6", module.exports)
+	     require("vue-hot-reload-api").rerender("data-v-71f2b75a", module.exports)
 	  }
 	}
 
 /***/ },
-/* 119 */
+/* 155 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var __vue_exports__, __vue_options__
 	var __vue_styles__ = {}
 
 	/* script */
-	__vue_exports__ = __webpack_require__(120)
+	__vue_exports__ = __webpack_require__(156)
 
 	/* template */
-	var __vue_template__ = __webpack_require__(121)
+	var __vue_template__ = __webpack_require__(157)
 	__vue_options__ = __vue_exports__ = __vue_exports__ || {}
 	if (
 	  typeof __vue_exports__.default === "object" ||
@@ -24393,7 +27741,7 @@
 	if (typeof __vue_options__ === "function") {
 	  __vue_options__ = __vue_options__.options
 	}
-	__vue_options__.__file = "E:\\workspace\\musicPlayer\\src\\app\\components\\music-page\\music-main\\ranking.vue"
+	__vue_options__.__file = "E:\\workspace\\my-music-player\\src\\app\\components\\music-page\\music-main\\ranking.vue"
 	__vue_options__.render = __vue_template__.render
 	__vue_options__.staticRenderFns = __vue_template__.staticRenderFns
 
@@ -24404,9 +27752,9 @@
 	  if (!hotAPI.compatible) return
 	  module.hot.accept()
 	  if (!module.hot.data) {
-	    hotAPI.createRecord("data-v-39ac3f33", __vue_options__)
+	    hotAPI.createRecord("data-v-2d8d350f", __vue_options__)
 	  } else {
-	    hotAPI.reload("data-v-39ac3f33", __vue_options__)
+	    hotAPI.reload("data-v-2d8d350f", __vue_options__)
 	  }
 	})()}
 	if (__vue_options__.functional) {console.error("[vue-loader] ranking.vue: functional components are not supported and should be defined in plain js files using render functions.")}
@@ -24415,7 +27763,7 @@
 
 
 /***/ },
-/* 120 */
+/* 156 */
 /***/ function(module, exports) {
 
 	"use strict";
@@ -24437,7 +27785,7 @@
 	};
 
 /***/ },
-/* 121 */
+/* 157 */
 /***/ function(module, exports, __webpack_require__) {
 
 	module.exports={render:function (){var _vm=this;
@@ -24450,22 +27798,22 @@
 	if (false) {
 	  module.hot.accept()
 	  if (module.hot.data) {
-	     require("vue-hot-reload-api").rerender("data-v-39ac3f33", module.exports)
+	     require("vue-hot-reload-api").rerender("data-v-2d8d350f", module.exports)
 	  }
 	}
 
 /***/ },
-/* 122 */
+/* 158 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var __vue_exports__, __vue_options__
 	var __vue_styles__ = {}
 
 	/* script */
-	__vue_exports__ = __webpack_require__(123)
+	__vue_exports__ = __webpack_require__(159)
 
 	/* template */
-	var __vue_template__ = __webpack_require__(124)
+	var __vue_template__ = __webpack_require__(160)
 	__vue_options__ = __vue_exports__ = __vue_exports__ || {}
 	if (
 	  typeof __vue_exports__.default === "object" ||
@@ -24477,7 +27825,7 @@
 	if (typeof __vue_options__ === "function") {
 	  __vue_options__ = __vue_options__.options
 	}
-	__vue_options__.__file = "E:\\workspace\\musicPlayer\\src\\app\\components\\music-page\\music-main\\singer.vue"
+	__vue_options__.__file = "E:\\workspace\\my-music-player\\src\\app\\components\\music-page\\music-main\\singer.vue"
 	__vue_options__.render = __vue_template__.render
 	__vue_options__.staticRenderFns = __vue_template__.staticRenderFns
 
@@ -24488,9 +27836,9 @@
 	  if (!hotAPI.compatible) return
 	  module.hot.accept()
 	  if (!module.hot.data) {
-	    hotAPI.createRecord("data-v-73a9cc0f", __vue_options__)
+	    hotAPI.createRecord("data-v-21b6aa9a", __vue_options__)
 	  } else {
-	    hotAPI.reload("data-v-73a9cc0f", __vue_options__)
+	    hotAPI.reload("data-v-21b6aa9a", __vue_options__)
 	  }
 	})()}
 	if (__vue_options__.functional) {console.error("[vue-loader] singer.vue: functional components are not supported and should be defined in plain js files using render functions.")}
@@ -24499,7 +27847,7 @@
 
 
 /***/ },
-/* 123 */
+/* 159 */
 /***/ function(module, exports) {
 
 	"use strict";
@@ -24521,7 +27869,7 @@
 	};
 
 /***/ },
-/* 124 */
+/* 160 */
 /***/ function(module, exports, __webpack_require__) {
 
 	module.exports={render:function (){var _vm=this;
@@ -24534,22 +27882,22 @@
 	if (false) {
 	  module.hot.accept()
 	  if (module.hot.data) {
-	     require("vue-hot-reload-api").rerender("data-v-73a9cc0f", module.exports)
+	     require("vue-hot-reload-api").rerender("data-v-21b6aa9a", module.exports)
 	  }
 	}
 
 /***/ },
-/* 125 */
+/* 161 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var __vue_exports__, __vue_options__
 	var __vue_styles__ = {}
 
 	/* script */
-	__vue_exports__ = __webpack_require__(126)
+	__vue_exports__ = __webpack_require__(162)
 
 	/* template */
-	var __vue_template__ = __webpack_require__(127)
+	var __vue_template__ = __webpack_require__(163)
 	__vue_options__ = __vue_exports__ = __vue_exports__ || {}
 	if (
 	  typeof __vue_exports__.default === "object" ||
@@ -24561,7 +27909,7 @@
 	if (typeof __vue_options__ === "function") {
 	  __vue_options__ = __vue_options__.options
 	}
-	__vue_options__.__file = "E:\\workspace\\musicPlayer\\src\\app\\components\\music-page\\music-main\\new-music.vue"
+	__vue_options__.__file = "E:\\workspace\\my-music-player\\src\\app\\components\\music-page\\music-main\\new-music.vue"
 	__vue_options__.render = __vue_template__.render
 	__vue_options__.staticRenderFns = __vue_template__.staticRenderFns
 
@@ -24572,9 +27920,9 @@
 	  if (!hotAPI.compatible) return
 	  module.hot.accept()
 	  if (!module.hot.data) {
-	    hotAPI.createRecord("data-v-05c8df16", __vue_options__)
+	    hotAPI.createRecord("data-v-7c967f51", __vue_options__)
 	  } else {
-	    hotAPI.reload("data-v-05c8df16", __vue_options__)
+	    hotAPI.reload("data-v-7c967f51", __vue_options__)
 	  }
 	})()}
 	if (__vue_options__.functional) {console.error("[vue-loader] new-music.vue: functional components are not supported and should be defined in plain js files using render functions.")}
@@ -24583,7 +27931,7 @@
 
 
 /***/ },
-/* 126 */
+/* 162 */
 /***/ function(module, exports) {
 
 	"use strict";
@@ -24605,7 +27953,7 @@
 	};
 
 /***/ },
-/* 127 */
+/* 163 */
 /***/ function(module, exports, __webpack_require__) {
 
 	module.exports={render:function (){var _vm=this;
@@ -24618,17 +27966,17 @@
 	if (false) {
 	  module.hot.accept()
 	  if (module.hot.data) {
-	     require("vue-hot-reload-api").rerender("data-v-05c8df16", module.exports)
+	     require("vue-hot-reload-api").rerender("data-v-7c967f51", module.exports)
 	  }
 	}
 
 /***/ },
-/* 128 */
+/* 164 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
 
-	var _jquery = __webpack_require__(56);
+	var _jquery = __webpack_require__(91);
 
 	var _jquery2 = _interopRequireDefault(_jquery);
 
@@ -24647,16 +27995,16 @@
 	});
 
 /***/ },
-/* 129 */
+/* 165 */
 /***/ function(module, exports, __webpack_require__) {
 
 	// style-loader: Adds some css to the DOM by adding a <style> tag
 
 	// load the styles
-	var content = __webpack_require__(130);
+	var content = __webpack_require__(166);
 	if(typeof content === 'string') content = [[module.id, content, '']];
 	// add the styles to the DOM
-	var update = __webpack_require__(132)(content, {});
+	var update = __webpack_require__(168)(content, {});
 	if(content.locals) module.exports = content.locals;
 	// Hot Module Replacement
 	if(false) {
@@ -24673,21 +28021,21 @@
 	}
 
 /***/ },
-/* 130 */
+/* 166 */
 /***/ function(module, exports, __webpack_require__) {
 
-	exports = module.exports = __webpack_require__(131)();
+	exports = module.exports = __webpack_require__(167)();
 	// imports
 
 
 	// module
-	exports.push([module.id, "@charset \"UTF-8\";\n#app {\n  width: 100%;\n  height: 100%; }\n\n.main {\n  display: -ms-flexbox;\n  display: flex;\n  -ms-flex-direction: column;\n      flex-direction: column;\n  width: 100%;\n  height: 100%;\n  min-width: 1022px;\n  min-height: 670px;\n  overflow: hidden;\n  /* 主题样式 blue */\n  /* 主题样式 red */ }\n  .main.theme-blue .theme-bg, .main.theme-blue .carousel-page .carousel-page-item:hover .carousel-page-link, .carousel-page .carousel-page-item:hover .main.theme-blue .carousel-page-link, .main.theme-blue .carousel-page .carousel-page-item.carousel-page-current .carousel-page-link, .carousel-page .carousel-page-item.carousel-page-current .main.theme-blue .carousel-page-link {\n    background-color: #44aaf8; }\n  .main.theme-blue .theme-bg-h:hover {\n    background-color: #44aaf8; }\n  .main.theme-blue .theme-border {\n    border-color: #44aaf8; }\n  .main.theme-blue .theme-border-a.active {\n    border-color: #44aaf8; }\n  .main.theme-blue .theme-fcolor {\n    color: #44aaf8; }\n  .main.theme-blue .theme-fcolor-h-a:hover, .main.theme-blue .theme-fcolor-h-a.active {\n    color: #44aaf8; }\n  .main.theme-red .theme-bg, .main.theme-red .carousel-page .carousel-page-item:hover .carousel-page-link, .carousel-page .carousel-page-item:hover .main.theme-red .carousel-page-link, .main.theme-red .carousel-page .carousel-page-item.carousel-page-current .carousel-page-link, .carousel-page .carousel-page-item.carousel-page-current .main.theme-red .carousel-page-link {\n    background-color: #c62f2f; }\n  .main.theme-red .theme-bg-h:hover {\n    background-color: #c62f2f; }\n  .main.theme-red .theme-border {\n    border-color: #c62f2f; }\n  .main.theme-red .theme-border-a.active {\n    border-color: #c62f2f; }\n  .main.theme-red .theme-fcolor {\n    color: #c62f2f; }\n  .main.theme-red .theme-fcolor-h-a:hover, .main.theme-red .theme-fcolor-h-a.active {\n    color: #c62f2f; }\n\nhtml, body {\n  width: 100%;\n  height: 100%;\n  margin: 0;\n  padding: 0;\n  font-size: 12px;\n  overflow: hidden; }\n  html *, body * {\n    box-sizing: border-box;\n    font-family: 'Microsoft YaHei'; }\n\na {\n  text-decoration: none;\n  color: inherit; }\n\n.left {\n  float: left; }\n\n.right {\n  float: right; }\n\n.text-center {\n  text-align: center; }\n\n.inline-block {\n  display: inline-block; }\n\n.icon {\n  width: 1em;\n  height: 1em;\n  vertical-align: -0.15em;\n  fill: currentColor;\n  overflow: hidden; }\n\nul {\n  list-style: none;\n  margin: 0;\n  padding: 0; }\n\n/* 文本溢出 */\n.text-hidden {\n  display: inline-block;\n  white-space: nowrap;\n  overflow: hidden;\n  text-overflow: ellipsis; }\n\n/* 清除浮动 */\n.clearfix {\n  *zoom: 1;\n  overflow: initial; }\n\n.clearfix:before, .clearfix:after {\n  display: table;\n  line-height: 0;\n  content: \"\"; }\n\n.clearfix:after {\n  clear: both; }\n\n/* 滚动条样式 */\n::-webkit-scrollbar-track-piece {\n  width: 8px; }\n\n::-webkit-scrollbar {\n  width: 8px; }\n\n::-webkit-scrollbar-thumb {\n  width: 8px;\n  background: #e1e1e2;\n  border-radius: 4px; }\n  ::-webkit-scrollbar-thumb:hover {\n    background: #cfcfd1; }\n\n/* 拖动窗口 */\n.app-drag {\n  -webkit-app-region: drag; }\n\n/* 禁止拖动窗口 */\n.app-no-drag {\n  -webkit-app-region: no-drag; }\n\n.no-select {\n  -webkit-user-select: none;\n     -moz-user-select: none;\n      -ms-user-select: none;\n          user-select: none;\n  cursor: default; }\n\n/* 标题栏 */\n.header {\n  width: 100%;\n  -ms-flex: none;\n      flex: none;\n  height: 50px;\n  color: #fff;\n  -webkit-app-region: drag; }\n  .header .logo {\n    line-height: 50px;\n    font-size: 18px;\n    display: inline-block;\n    margin-left: 16px; }\n  .header .logo-link {\n    color: #fff;\n    font-family: '\\5FAE\\8F6F\\96C5\\9ED1'; }\n  .header .logo-icon {\n    font-size: 20px; }\n\n.search-bar {\n  margin-left: 60px;\n  height: 100%;\n  color: #fff; }\n  .search-bar .page-left, .search-bar .page-right {\n    width: 27px;\n    height: 22px;\n    color: #fff;\n    border: 1px solid rgba(64, 64, 64, 0.2);\n    margin-top: 14px;\n    line-height: 20px;\n    text-align: center; }\n    .search-bar .page-left.page-end, .search-bar .page-right.page-end {\n      color: #ddd; }\n  .search-bar .page-left {\n    border-right: 0;\n    border-radius: 3px 0 0 3px; }\n  .search-bar .page-right {\n    border-radius: 0 3px 3px 0; }\n\n.search-text {\n  margin-left: 10px;\n  width: 218px;\n  height: 22px;\n  border: 0;\n  border-radius: 11px;\n  margin-top: 14px;\n  padding: 0 10px;\n  padding-right: 24px;\n  background-color: rgba(47, 47, 47, 0.2);\n  color: #fff;\n  font-size: 12px;\n  font-family: '\\5FAE\\8F6F\\96C5\\9ED1'; }\n  .search-text:focus {\n    outline: none; }\n  .search-text::-webkit-input-placeholder {\n    color: #fff;\n    opacity: .3;\n    font-family: 'Serif'; }\n\n.search-icon {\n  line-height: 50px;\n  color: #fff;\n  font-size: 13px;\n  margin-left: -25px;\n  opacity: .5; }\n  .search-icon:hover {\n    opacity: 1; }\n\n.window-bar, .setting-bar {\n  line-height: 20px;\n  margin-top: 15px;\n  color: #fff; }\n  .window-bar .top-btn, .setting-bar .top-btn {\n    opacity: .7;\n    color: #fff; }\n    .window-bar .top-btn:hover, .setting-bar .top-btn:hover {\n      opacity: 1; }\n\n.window-bar {\n  margin-right: 16px;\n  padding-left: 8px;\n  border-left: 1px solid rgba(0, 0, 0, 0.1);\n  height: 20px; }\n  .window-bar .top-btn {\n    font-size: 14px;\n    margin-left: 9px; }\n\n.setting-bar {\n  padding-right: 18px; }\n  .setting-bar .top-btn {\n    font-size: 18px;\n    margin-left: 20px; }\n\n.content {\n  -ms-flex: 1;\n      flex: 1;\n  display: -ms-flexbox;\n  display: flex;\n  width: 100%;\n  background-color: #fafafa; }\n\n.music-content {\n  width: 100%;\n  height: 100%;\n  display: -ms-flexbox;\n  display: flex; }\n\n.main-left-content {\n  display: -ms-flexbox;\n  display: flex;\n  -webkit-user-select: none;\n     -moz-user-select: none;\n      -ms-user-select: none;\n          user-select: none;\n  -ms-flex-direction: column;\n      flex-direction: column;\n  background-color: #f5f5f7;\n  min-width: 200px;\n  width: 200px;\n  height: 100%;\n  border-right: 1px solid #e1e1e2;\n  -ms-flex-negative: 0;\n      flex-shrink: 0; }\n  .main-left-content .width-drag-bar {\n    position: absolute;\n    top: 0;\n    right: 0;\n    width: 4px;\n    height: 100%;\n    cursor: w-resize; }\n\n.left-drag-box {\n  position: relative;\n  overflow: hidden;\n  -ms-flex: 1;\n      flex: 1; }\n  .left-drag-box .main-left-menu {\n    overflow: auto;\n    height: 100%; }\n\n.left-menu .left-menu-title {\n  padding-right: 12px;\n  color: #777;\n  margin: 12px 0 8px 10px; }\n  .left-menu .left-menu-title.left-menu-title-hover {\n    cursor: pointer; }\n    .left-menu .left-menu-title.left-menu-title-hover:hover .left-menu-title-icon {\n      color: #444; }\n\n.left-menu-list .left-list-item {\n  line-height: 32px;\n  cursor: pointer; }\n  .left-menu-list .left-list-item .left-item-link {\n    display: -ms-flexbox;\n    display: flex;\n    width: 100%;\n    height: 100%;\n    color: #555;\n    padding-left: 16px;\n    padding-right: 12px;\n    border-left: 3px solid #fafafa; }\n    .left-menu-list .left-list-item .left-item-link:hover {\n      color: #000; }\n    .left-menu-list .left-list-item .left-item-link.active {\n      color: #000;\n      background-color: #e8e9ec; }\n    .left-menu-list .left-list-item .left-item-link .left-list-icon {\n      font-size: 18px;\n      margin-right: 8px;\n      margin-top: 7px; }\n    .left-menu-list .left-list-item .left-item-link .left-menu-text {\n      width: 100%; }\n\n.player-info {\n  -ms-flex: 0 0 60px;\n      flex: 0 0 60px;\n  border-top: 1px solid #e1e1e2; }\n\n.main-info {\n  width: 100%;\n  min-width: 822px;\n  padding: 0 30px;\n  overflow: auto; }\n\n.footer {\n  -ms-flex: none;\n      flex: none;\n  height: 50px;\n  background-color: #f6f6f8;\n  border-top: 1px solid #e1e1e2;\n  display: -ms-flexbox;\n  display: flex; }\n\n/* 播放操作栏 */\n.player-btn-bar {\n  width: 200px;\n  height: 100%;\n  display: -ms-flexbox;\n  display: flex;\n  -ms-flex-align: center;\n      align-items: center;\n  -ms-flex-pack: center;\n      justify-content: center; }\n  .player-btn-bar .player-prev, .player-btn-bar .player-next {\n    font-size: 34px; }\n  .player-btn-bar .player-start {\n    font-size: 38px;\n    padding: 0 20px; }\n  .player-btn-bar .player-prev:hover, .player-btn-bar .player-next:hover, .player-btn-bar .player-start:hover {\n    color: #51abf9; }\n\n/* 播放进度栏 */\n.music-plan-bar {\n  -ms-flex: 1;\n      flex: 1; }\n\n/* 播放列表 */\n.music-main-info {\n  max-width: 1040px;\n  margin: 0 auto; }\n\n.music-main-ul {\n  display: -ms-flexbox;\n  display: flex;\n  -ms-flex-pack: center;\n      justify-content: center;\n  line-height: 43px;\n  border-bottom: 1px solid #ddd; }\n\n.music-tab-item {\n  font-size: 15px;\n  padding: 0 12px; }\n\n.music-tab-link {\n  display: block;\n  width: 60px;\n  text-align: center;\n  color: #000;\n  line-height: 43px;\n  margin-bottom: -1px;\n  border-bottom: 2px solid transparent; }\n\n/* 轮播图 */\n.carousel {\n  margin-top: 20px; }\n  .carousel .carousel-img {\n    position: relative;\n    height: 200px; }\n    .carousel .carousel-img .carousel-item {\n      width: 500px;\n      height: 180px;\n      position: absolute;\n      bottom: 2px;\n      left: 50%;\n      z-index: -1;\n      margin-left: -250px;\n      transition: all 550ms; }\n      .carousel .carousel-img .carousel-item.carousel-current {\n        z-index: 2;\n        width: 540px;\n        height: 200px;\n        left: 50%;\n        margin-left: -270px;\n        bottom: 0; }\n      .carousel .carousel-img .carousel-item.carousel-current-prev, .carousel .carousel-img .carousel-item.carousel-current-next {\n        z-index: 1;\n        width: 513px;\n        height: 190px;\n        bottom: 0; }\n        .carousel .carousel-img .carousel-item.carousel-current-prev.carousel-current-prev, .carousel .carousel-img .carousel-item.carousel-current-next.carousel-current-prev {\n          left: 0;\n          margin-left: 0; }\n        .carousel .carousel-img .carousel-item.carousel-current-prev.carousel-current-next, .carousel .carousel-img .carousel-item.carousel-current-next.carousel-current-next {\n          left: initial;\n          right: 0; }\n        .carousel .carousel-img .carousel-item.carousel-current-prev:after, .carousel .carousel-img .carousel-item.carousel-current-next:after {\n          content: '';\n          position: absolute;\n          left: 0;\n          top: 0;\n          width: 100%;\n          height: 100%;\n          background-color: black;\n          opacity: .5; }\n      .carousel .carousel-img .carousel-item .carousel-item-img {\n        width: 100%;\n        height: 100%; }\n\n.carousel-prev, .carousel-next {\n  position: absolute;\n  top: 60px;\n  color: rgba(255, 255, 255, 0);\n  font-size: 24px;\n  line-height: 80px;\n  padding: 0 10px;\n  z-index: 9; }\n  .carousel-prev:hover, .carousel-next:hover {\n    color: rgba(255, 255, 255, 0.6); }\n\n.carousel-prev {\n  left: 0; }\n\n.carousel-next {\n  right: 0; }\n\n.carousel-page {\n  display: -ms-flexbox;\n  display: flex;\n  -ms-flex-pack: center;\n      justify-content: center;\n  width: 100%;\n  margin-top: 12px; }\n  .carousel-page .carousel-page-item {\n    width: 18px;\n    height: 5px;\n    margin: 0 3px;\n    padding-bottom: 3px;\n    cursor: pointer; }\n    .carousel-page .carousel-page-item .carousel-page-link {\n      display: block;\n      height: 100%;\n      background-color: #c8c8c8; }\n\n/* 推荐页标题 */\n.re-item-title {\n  font-family: '\\5FAE\\8F6F\\96C5\\9ED1';\n  font-size: 18px;\n  margin: 0;\n  line-height: 36px;\n  border-bottom: 1px solid #ddd;\n  color: #333;\n  margin-bottom: 10px; }\n\n/* 推荐页面更多链接 */\n.recommend-detail-link {\n  color: #666;\n  font-size: 12px; }\n  .recommend-detail-link:hover {\n    color: #444; }\n\n/* 推荐歌单 */\n.re-song-menu .re-song-menu-list {\n  display: -ms-flexbox;\n  display: flex;\n  -ms-flex-wrap: wrap;\n      flex-wrap: wrap;\n  -ms-flex-pack: justify;\n      justify-content: space-between;\n  margin-left: -18px; }\n  .re-song-menu .re-song-menu-list .re-song-menu-item {\n    position: relative;\n    -ms-flex-preferred-size: 20%;\n        flex-basis: 20%;\n    padding-left: 18px; }\n    .re-song-menu .re-song-menu-list .re-song-menu-item .re-song-img {\n      width: 100%;\n      border: 1px solid rgba(0, 0, 0, 0.1); }\n    .re-song-menu .re-song-menu-list .re-song-menu-item .re-song-title {\n      height: 78px;\n      margin: 0;\n      line-height: 20px; }\n    .re-song-menu .re-song-menu-list .re-song-menu-item .re-song-num-bar {\n      position: absolute;\n      top: 0;\n      right: 0;\n      background: linear-gradient(to right, transparent, rgba(0, 0, 0, 0.3));\n      color: #fff;\n      width: 55%;\n      line-height: 20px;\n      text-align: right;\n      padding-right: 7px; }\n      .re-song-menu .re-song-menu-list .re-song-menu-item .re-song-num-bar .re-song-num-icon {\n        font-size: 12px; }\n      .re-song-menu .re-song-menu-list .re-song-menu-item .re-song-num-bar .re-song-num {\n        font-family: '\\5FAE\\8F6F\\96C5\\9ED1';\n        text-shadow: 1px 1px 1px #444; }\n    .re-song-menu .re-song-menu-list .re-song-menu-item .re-play-icon {\n      position: absolute;\n      right: 6px;\n      bottom: 6px;\n      font-size: 26px;\n      opacity: 0;\n      transition: opacity 300ms; }\n    .re-song-menu .re-song-menu-list .re-song-menu-item .re-song-item-link {\n      display: block;\n      position: relative;\n      line-height: 0;\n      margin-bottom: 3px; }\n      .re-song-menu .re-song-menu-list .re-song-menu-item .re-song-item-link:hover .start-play-icon {\n        opacity: 1; }\n\n.start-play-icon {\n  color: #fff;\n  background: rgba(0, 0, 0, 0.3);\n  border-radius: 50%; }\n\n/* 新碟列表 */\n.re-new-music-list {\n  display: -ms-flexbox;\n  display: flex;\n  -ms-flex-direction: column;\n      flex-direction: column;\n  -ms-flex-wrap: wrap;\n      flex-wrap: wrap;\n  height: 302px;\n  border: 1px solid #eeeeee;\n  border-right: 0;\n  margin-bottom: 50px; }\n  .re-new-music-list .re-new-music-item {\n    -ms-flex: 0 0 20%;\n        flex: 0 0 20%;\n    height: 60px;\n    display: -ms-flexbox;\n    display: flex;\n    -ms-flex-align: center;\n        align-items: center;\n    border-right: 1px solid #eeeeee; }\n    .re-new-music-list .re-new-music-item:nth-child(2n) {\n      background: #f5f5f7; }\n    .re-new-music-list .re-new-music-item:nth-child(5) ~ .re-new-music-item:nth-child(2n) {\n      background: transparent; }\n    .re-new-music-list .re-new-music-item:nth-child(5) ~ .re-new-music-item:nth-child(2n-1) {\n      background: #f5f5f7; }\n    .re-new-music-list .re-new-music-item:hover {\n      background: #ecedee !important; }\n    .re-new-music-list .re-new-music-item .re-new-music-index {\n      font-family: '\\5FAE\\8F6F\\96C5\\9ED1';\n      width: 40px;\n      text-align: center;\n      color: #aaa; }\n    .re-new-music-list .re-new-music-item .re-music-pic {\n      display: block;\n      width: 40px;\n      height: 40px;\n      position: relative; }\n    .re-new-music-list .re-new-music-item .re-music-img {\n      width: 100%;\n      height: 100%; }\n    .re-new-music-list .re-new-music-item .re-music-play-icon {\n      position: absolute;\n      top: 9px;\n      left: 9px;\n      font-size: 22px;\n      transition: background 400ms; }\n      .re-new-music-list .re-new-music-item .re-music-play-icon:hover {\n        background: rgba(0, 0, 0, 0.5); }\n    .re-new-music-list .re-new-music-item .re-new-music-name, .re-new-music-list .re-new-music-item .re-new-music-singer {\n      line-height: 20px;\n      margin: 0;\n      padding-left: 10px; }\n    .re-new-music-list .re-new-music-item .re-new-music-singer {\n      color: #888; }\n\n.re-mv {\n  margin-bottom: 50px; }\n  .re-mv .re-mv-list {\n    display: -ms-flexbox;\n    display: flex;\n    margin-left: -18px; }\n    .re-mv .re-mv-list .re-mv-item {\n      -ms-flex-positive: 1;\n          flex-grow: 1;\n      margin-left: 18px; }\n      .re-mv .re-mv-list .re-mv-item .re-mv-img {\n        width: 100%;\n        border: 1px solid rgba(0, 0, 0, 0.1); }\n  .re-mv .re-mv-item-title, .re-mv .re-mv-item-singer {\n    margin: 0;\n    line-height: 20px; }\n  .re-mv .re-mv-item-title {\n    font-family: '\\5FAE\\8F6F\\96C5\\9ED1'; }\n  .re-mv .re-mv-item-singer {\n    color: #777; }\n", ""]);
+	exports.push([module.id, "@charset \"UTF-8\";\n#app {\n  width: 100%;\n  height: 100%; }\n\n.main {\n  display: -ms-flexbox;\n  display: flex;\n  -ms-flex-direction: column;\n      flex-direction: column;\n  width: 100%;\n  height: 100%;\n  min-width: 1022px;\n  overflow: hidden;\n  /* 主题样式 blue */\n  /* 主题样式 red */ }\n  .main.theme-blue .theme-bg, .main.theme-blue .progress-corner:before, .main.theme-blue .carousel-page .carousel-page-item:hover .carousel-page-link, .carousel-page .carousel-page-item:hover .main.theme-blue .carousel-page-link, .main.theme-blue .carousel-page .carousel-page-item.carousel-page-current .carousel-page-link, .carousel-page .carousel-page-item.carousel-page-current .main.theme-blue .carousel-page-link {\n    background-color: #44aaf8; }\n  .main.theme-blue .theme-bg-h:hover {\n    background-color: #44aaf8; }\n  .main.theme-blue .theme-border {\n    border-color: #44aaf8; }\n  .main.theme-blue .theme-border-a.active {\n    border-color: #44aaf8; }\n  .main.theme-blue .theme-fcolor {\n    color: #44aaf8; }\n  .main.theme-blue .theme-fcolor-h-a:hover, .main.theme-blue .theme-fcolor-h-a.active {\n    color: #44aaf8; }\n  .main.theme-red .theme-bg, .main.theme-red .progress-corner:before, .main.theme-red .carousel-page .carousel-page-item:hover .carousel-page-link, .carousel-page .carousel-page-item:hover .main.theme-red .carousel-page-link, .main.theme-red .carousel-page .carousel-page-item.carousel-page-current .carousel-page-link, .carousel-page .carousel-page-item.carousel-page-current .main.theme-red .carousel-page-link {\n    background-color: #c62f2f; }\n  .main.theme-red .theme-bg-h:hover {\n    background-color: #c62f2f; }\n  .main.theme-red .theme-border {\n    border-color: #c62f2f; }\n  .main.theme-red .theme-border-a.active {\n    border-color: #c62f2f; }\n  .main.theme-red .theme-fcolor {\n    color: #c62f2f; }\n  .main.theme-red .theme-fcolor-h-a:hover, .main.theme-red .theme-fcolor-h-a.active {\n    color: #c62f2f; }\n\nhtml, body {\n  width: 100%;\n  height: 100%;\n  margin: 0;\n  padding: 0;\n  font-size: 12px;\n  overflow: hidden; }\n  html *, body * {\n    box-sizing: border-box;\n    font-family: 'Microsoft YaHei'; }\n\na {\n  text-decoration: none;\n  color: inherit; }\n\n.left {\n  float: left; }\n\n.right {\n  float: right; }\n\n.text-center {\n  text-align: center; }\n\n.inline-block {\n  display: inline-block; }\n\n.icon {\n  width: 1em;\n  height: 1em;\n  vertical-align: -0.15em;\n  fill: currentColor;\n  overflow: hidden; }\n\nul {\n  list-style: none;\n  margin: 0;\n  padding: 0; }\n\n/* 文本溢出 */\n.text-hidden {\n  display: inline-block;\n  white-space: nowrap;\n  overflow: hidden;\n  text-overflow: ellipsis; }\n\n/* 清除浮动 */\n.clearfix {\n  *zoom: 1;\n  overflow: initial; }\n\n.clearfix:before, .clearfix:after {\n  display: table;\n  line-height: 0;\n  content: \"\"; }\n\n.clearfix:after {\n  clear: both; }\n\n/* 滚动条样式 */\n::-webkit-scrollbar-track-piece {\n  width: 8px; }\n\n::-webkit-scrollbar {\n  width: 8px; }\n\n::-webkit-scrollbar-thumb {\n  width: 8px;\n  background: #e1e1e2;\n  border-radius: 4px; }\n  ::-webkit-scrollbar-thumb:hover {\n    background: #cfcfd1; }\n\n/* 拖动窗口 */\n.app-drag {\n  -webkit-app-region: drag; }\n\n/* 禁止拖动窗口 */\n.app-no-drag {\n  -webkit-app-region: no-drag; }\n\n.no-select {\n  -webkit-user-select: none;\n     -moz-user-select: none;\n      -ms-user-select: none;\n          user-select: none;\n  cursor: default; }\n\n/* 标题栏 */\n.header {\n  width: 100%;\n  -ms-flex: none;\n      flex: none;\n  height: 50px;\n  color: #fff;\n  -webkit-app-region: drag; }\n  .header .logo {\n    line-height: 50px;\n    font-size: 18px;\n    display: inline-block;\n    margin-left: 16px; }\n  .header .logo-link {\n    color: #fff;\n    font-family: '\\5FAE\\8F6F\\96C5\\9ED1'; }\n  .header .logo-icon {\n    font-size: 20px; }\n\n/* 搜索栏 */\n.search-bar {\n  margin-left: 60px;\n  height: 100%;\n  color: #fff; }\n  .search-bar .page-left, .search-bar .page-right {\n    width: 27px;\n    height: 22px;\n    color: #fff;\n    border: 1px solid rgba(64, 64, 64, 0.2);\n    margin-top: 14px;\n    line-height: 20px;\n    text-align: center; }\n    .search-bar .page-left.page-end, .search-bar .page-right.page-end {\n      color: #ddd; }\n  .search-bar .page-left {\n    border-right: 0;\n    border-radius: 3px 0 0 3px; }\n  .search-bar .page-right {\n    border-radius: 0 3px 3px 0; }\n\n/* 搜索框 */\n.search-text {\n  margin-left: 10px;\n  width: 218px;\n  height: 22px;\n  border: 0;\n  border-radius: 11px;\n  margin-top: 14px;\n  padding: 0 10px;\n  padding-right: 24px;\n  background-color: rgba(47, 47, 47, 0.2);\n  color: #fff;\n  font-size: 12px;\n  font-family: '\\5FAE\\8F6F\\96C5\\9ED1'; }\n  .search-text:focus {\n    outline: none; }\n  .search-text::-webkit-input-placeholder {\n    color: #fff;\n    opacity: .3;\n    font-family: 'Serif'; }\n\n/* 搜索按钮 */\n.search-icon {\n  line-height: 50px;\n  color: #fff;\n  font-size: 13px;\n  margin-left: -25px;\n  opacity: .5; }\n  .search-icon:hover {\n    opacity: 1; }\n\n/* 设置按钮 */\n.window-bar, .setting-bar {\n  line-height: 20px;\n  margin-top: 15px;\n  color: #fff; }\n  .window-bar .top-btn-icon, .setting-bar .top-btn-icon {\n    opacity: .7;\n    color: #fff; }\n    .window-bar .top-btn-icon:hover, .setting-bar .top-btn-icon:hover {\n      opacity: 1; }\n\n/* 窗口操作栏 */\n.window-bar {\n  margin-right: 16px;\n  padding-left: 8px;\n  border-left: 1px solid rgba(0, 0, 0, 0.1);\n  height: 20px; }\n  .window-bar .top-btn {\n    font-size: 14px;\n    margin-left: 9px; }\n\n/* 头部设置栏 */\n.setting-bar {\n  padding-right: 8px; }\n  .setting-bar .top-btn {\n    font-size: 18px; }\n  .setting-bar .setting-bar-item {\n    position: relative;\n    display: -ms-flexbox;\n    display: flex;\n    -ms-flex-pack: center;\n        justify-content: center;\n    margin: 0 10px; }\n\n/* 主题设置窗口样式 */\n.theme-style-model {\n  position: absolute;\n  top: 35px;\n  z-index: 3;\n  padding: 15px;\n  width: 320px;\n  background-color: #fff;\n  border-radius: 3px;\n  box-shadow: 0 0 10px rgba(0, 0, 0, 0.4); }\n  .theme-style-model .model-front {\n    display: block;\n    text-align: center;\n    width: 100%; }\n    .theme-style-model .model-front:after {\n      content: '';\n      margin-left: -10px;\n      position: absolute;\n      top: -20px;\n      width: 0;\n      height: 0;\n      border-width: 10px;\n      border-style: solid;\n      border-color: #fff;\n      border-top-color: transparent;\n      border-left-color: transparent;\n      border-right-color: transparent; }\n  .theme-style-model .theme-tab {\n    border-bottom: 1px solid #ccc;\n    margin-bottom: 15px; }\n    .theme-style-model .theme-tab .theme-tab-item {\n      color: #555;\n      font-size: 13px;\n      margin-right: 16px;\n      border-bottom: 2px solid transparent;\n      margin-bottom: -1px; }\n      .theme-style-model .theme-tab .theme-tab-item:hover {\n        color: #000; }\n      .theme-style-model .theme-tab .theme-tab-item.active {\n        border-bottom: 2px solid #555;\n        color: #000; }\n  .theme-style-model .theme-box .theme-ul {\n    display: -ms-flexbox;\n    display: flex;\n    margin-right: -5px;\n    margin-bottom: -5px;\n    -ms-flex-wrap: wrap;\n        flex-wrap: wrap; }\n    .theme-style-model .theme-box .theme-ul .theme-item {\n      -ms-flex-preferred-size: 33.33%;\n          flex-basis: 33.33%;\n      padding: 0 5px 5px 0; }\n      .theme-style-model .theme-box .theme-ul .theme-item .theme-toggle-link {\n        display: block;\n        height: 90px;\n        padding: 2px;\n        border-style: solid;\n        border-width: 0; }\n        .theme-style-model .theme-box .theme-ul .theme-item .theme-toggle-link:hover {\n          padding: 1px;\n          border-width: 1px; }\n        .theme-style-model .theme-box .theme-ul .theme-item .theme-toggle-link .theme-item-box {\n          position: relative;\n          width: 100%;\n          height: 100%; }\n          .theme-style-model .theme-box .theme-ul .theme-item .theme-toggle-link .theme-item-box .theme-name {\n            position: absolute;\n            line-height: 20px;\n            left: 0;\n            bottom: 0;\n            width: 100%;\n            padding-left: 4px;\n            background-color: rgba(0, 0, 0, 0.2); }\n\n.content {\n  -ms-flex: 1;\n      flex: 1;\n  display: -ms-flexbox;\n  display: flex;\n  width: 100%;\n  background-color: #fafafa; }\n\n.music-content {\n  width: 100%;\n  height: 100%;\n  display: -ms-flexbox;\n  display: flex; }\n\n.main-left-content {\n  display: -ms-flexbox;\n  display: flex;\n  -webkit-user-select: none;\n     -moz-user-select: none;\n      -ms-user-select: none;\n          user-select: none;\n  -ms-flex-direction: column;\n      flex-direction: column;\n  background-color: #f5f5f7;\n  min-width: 200px;\n  width: 200px;\n  height: 100%;\n  border-right: 1px solid #e1e1e2;\n  -ms-flex-negative: 0;\n      flex-shrink: 0; }\n  .main-left-content .width-drag-bar {\n    position: absolute;\n    top: 0;\n    right: 0;\n    width: 4px;\n    height: 100%;\n    cursor: w-resize; }\n\n.left-drag-box {\n  position: relative;\n  overflow: hidden;\n  -ms-flex: 1;\n      flex: 1; }\n  .left-drag-box .main-left-menu {\n    overflow: auto;\n    height: 100%; }\n\n/* 左侧菜单容器 */\n.left-menu .left-menu-title {\n  padding-right: 12px;\n  color: #777;\n  margin: 12px 0 8px 10px; }\n  .left-menu .left-menu-title.left-menu-title-hover {\n    cursor: pointer; }\n    .left-menu .left-menu-title.left-menu-title-hover:hover .left-menu-title-icon {\n      color: #444; }\n\n/* 左侧菜单 */\n.left-menu-list .left-list-item {\n  line-height: 32px;\n  cursor: pointer; }\n  .left-menu-list .left-list-item .left-item-link {\n    display: -ms-flexbox;\n    display: flex;\n    width: 100%;\n    height: 100%;\n    color: #555;\n    padding-left: 16px;\n    padding-right: 12px;\n    border-left: 3px solid #fafafa; }\n    .left-menu-list .left-list-item .left-item-link:hover {\n      color: #000; }\n    .left-menu-list .left-list-item .left-item-link.active {\n      color: #000;\n      background-color: #e8e9ec; }\n    .left-menu-list .left-list-item .left-item-link .left-list-icon {\n      font-size: 18px;\n      margin-right: 8px;\n      margin-top: 7px; }\n    .left-menu-list .left-list-item .left-item-link .left-menu-text {\n      width: 100%; }\n\n/* 当前播放音乐信息 */\n.player-info {\n  -ms-flex: 0 0 60px;\n      flex: 0 0 60px;\n  border-top: 1px solid #e1e1e2;\n  display: -ms-flexbox;\n  display: flex; }\n  .player-info .song-pic-box {\n    position: relative;\n    width: 60px;\n    height: 60px;\n    line-height: 60px;\n    cursor: pointer; }\n    .player-info .song-pic-box:hover .song-pic-icon {\n      display: block; }\n  .player-info .song-pic-small {\n    width: 100%;\n    height: 100%; }\n  .player-info .song-pic-icon {\n    display: none;\n    position: absolute;\n    top: 0;\n    left: 0;\n    width: 100%;\n    height: 100%;\n    background-color: rgba(0, 0, 0, 0.4);\n    font-size: 40px;\n    color: #eee;\n    text-align: center; }\n  .player-info .music-bar-song-name {\n    font-size: 15px;\n    margin-top: 12px;\n    margin-bottom: 0;\n    padding-left: 8px;\n    line-height: 1; }\n  .player-info .music-bar-like-icon {\n    font-size: 17px; }\n  .player-info .song-name-text {\n    width: 103px; }\n  .player-info .music-bar-singer-name {\n    margin-top: 4px;\n    padding-left: 8px;\n    width: 110px; }\n\n.main-info {\n  width: 100%;\n  min-width: 822px;\n  padding: 0 30px;\n  overflow: auto; }\n\n.footer {\n  -ms-flex: none;\n      flex: none;\n  height: 50px;\n  background-color: #f6f6f8;\n  border-top: 1px solid #e1e1e2;\n  display: -ms-flexbox;\n  display: flex; }\n\n/* 播放操作栏 */\n.player-btn-bar {\n  width: 200px;\n  height: 100%;\n  display: -ms-flexbox;\n  display: flex;\n  -ms-flex-align: center;\n      align-items: center;\n  -ms-flex-pack: center;\n      justify-content: center; }\n  .player-btn-bar .player-prev, .player-btn-bar .player-next {\n    font-size: 34px; }\n  .player-btn-bar .player-start {\n    font-size: 38px;\n    padding: 0 20px; }\n  .player-btn-bar .player-prev:hover, .player-btn-bar .player-next:hover, .player-btn-bar .player-start:hover {\n    color: #51abf9; }\n\n/* 播放进度栏 */\n.music-plan-bar {\n  -ms-flex: 1;\n      flex: 1;\n  display: -ms-flexbox;\n  display: flex;\n  height: 100%;\n  -ms-flex-align: center;\n      align-items: center;\n  line-height: 50px;\n  /* 当前播放时间 */\n  /* 音乐总时间 */\n  /* 音乐进度条 */\n  /* 播放控制 */ }\n  .music-plan-bar .music-player {\n    display: none; }\n  .music-plan-bar .cur-time {\n    margin: 0 6px; }\n  .music-plan-bar .total-time {\n    margin: 0 6px; }\n  .music-plan-bar .song-progress {\n    -ms-flex: 1;\n        flex: 1;\n    background-color: rgba(0, 0, 0, 0.2);\n    height: 4px;\n    margin: 0 6px;\n    border-radius: 2px; }\n    .music-plan-bar .song-progress .progress-bar {\n      border-radius: 2px;\n      height: 100%; }\n    .music-plan-bar .song-progress .progress-corner:hover {\n      box-shadow: 0 0 8px #aaa; }\n  .music-plan-bar .song-control {\n    margin-left: 20px;\n    display: -ms-flexbox;\n    display: flex;\n    -ms-flex-align: center;\n        align-items: center;\n    /* 音量开关 */\n    /* 音量进度条 */ }\n    .music-plan-bar .song-control .volume-toggle {\n      height: 20px;\n      line-height: 20px;\n      color: #666;\n      font-size: 17px;\n      margin-right: 4px; }\n      .music-plan-bar .song-control .volume-toggle:hover {\n        color: #333; }\n    .music-plan-bar .song-control .volume-progress {\n      width: 100px;\n      height: 4px;\n      background-color: rgba(0, 0, 0, 0.1);\n      border-radius: 2px; }\n      .music-plan-bar .song-control .volume-progress .volume-progress-val {\n        height: 100%;\n        border-radius: 2px; }\n      .music-plan-bar .song-control .volume-progress .progress-corner {\n        display: none; }\n      .music-plan-bar .song-control .volume-progress:hover .progress-corner {\n        display: block; }\n\n/* 进度条拖动按钮 */\n.progress-corner {\n  width: 14px;\n  height: 14px;\n  border-radius: 50%;\n  border: 1px solid #bbb;\n  background-color: #fff;\n  margin-top: -5px;\n  margin-left: -7px;\n  line-height: 0;\n  font-size: 35px;\n  text-align: center; }\n  .progress-corner:before {\n    content: '';\n    width: 4px;\n    height: 4px;\n    border-radius: 50%;\n    display: inline-block;\n    vertical-align: middle;\n    margin-top: 3px; }\n\n/* 切换播放模式按钮 */\n.player-type-toggle {\n  height: 20px;\n  line-height: 20px;\n  margin-left: 20px;\n  font-size: 20px;\n  color: #555; }\n  .player-type-toggle:hover {\n    color: #000; }\n\n/* 歌词开关 */\n.lyric-open {\n  margin: 0 18px;\n  border: 1px solid #999;\n  width: 17px;\n  height: 17px;\n  line-height: 17px;\n  text-align: center; }\n  .lyric-open:hover {\n    border-color: #555; }\n\n/* 播放列表 */\n.player-list {\n  display: -ms-flexbox;\n  display: flex;\n  -ms-flex-align: center;\n      align-items: center; }\n  .player-list .player-list-icon {\n    font-size: 16px; }\n  .player-list .player-list-num {\n    display: inline-block;\n    width: 30px;\n    height: 15px;\n    line-height: 15px;\n    margin-right: 18px;\n    margin-left: -3px;\n    border-radius: 0 8px 8px 0;\n    background-color: #ddd;\n    text-align: center; }\n\n.music-main-info {\n  max-width: 1040px;\n  margin: 0 auto; }\n\n.music-main-ul {\n  display: -ms-flexbox;\n  display: flex;\n  -ms-flex-pack: center;\n      justify-content: center;\n  line-height: 43px;\n  border-bottom: 1px solid #ddd; }\n\n.music-tab-item {\n  font-size: 15px;\n  padding: 0 12px; }\n\n.music-tab-link {\n  display: block;\n  width: 60px;\n  text-align: center;\n  color: #000;\n  line-height: 43px;\n  margin-bottom: -1px;\n  border-bottom: 2px solid transparent; }\n\n/* 轮播图 */\n.carousel {\n  margin-top: 20px; }\n  .carousel .carousel-img {\n    position: relative;\n    height: 200px; }\n    .carousel .carousel-img .carousel-item {\n      width: 500px;\n      height: 180px;\n      position: absolute;\n      bottom: 2px;\n      left: 50%;\n      z-index: -1;\n      margin-left: -250px;\n      transition: all 550ms; }\n      .carousel .carousel-img .carousel-item.carousel-current {\n        z-index: 2;\n        width: 540px;\n        height: 200px;\n        left: 50%;\n        margin-left: -270px;\n        bottom: 0; }\n      .carousel .carousel-img .carousel-item.carousel-current-prev, .carousel .carousel-img .carousel-item.carousel-current-next {\n        z-index: 1;\n        width: 513px;\n        height: 190px;\n        bottom: 0; }\n        .carousel .carousel-img .carousel-item.carousel-current-prev.carousel-current-prev, .carousel .carousel-img .carousel-item.carousel-current-next.carousel-current-prev {\n          left: 0;\n          margin-left: 0; }\n        .carousel .carousel-img .carousel-item.carousel-current-prev.carousel-current-next, .carousel .carousel-img .carousel-item.carousel-current-next.carousel-current-next {\n          left: initial;\n          right: 0; }\n        .carousel .carousel-img .carousel-item.carousel-current-prev:after, .carousel .carousel-img .carousel-item.carousel-current-next:after {\n          content: '';\n          position: absolute;\n          left: 0;\n          top: 0;\n          width: 100%;\n          height: 100%;\n          background-color: black;\n          opacity: .5; }\n      .carousel .carousel-img .carousel-item .carousel-item-img {\n        width: 100%;\n        height: 100%; }\n\n.carousel-prev, .carousel-next {\n  position: absolute;\n  top: 60px;\n  color: rgba(255, 255, 255, 0);\n  font-size: 24px;\n  line-height: 80px;\n  padding: 0 10px;\n  z-index: 9; }\n  .carousel-prev:hover, .carousel-next:hover {\n    color: rgba(255, 255, 255, 0.6); }\n\n.carousel-prev {\n  left: 0; }\n\n.carousel-next {\n  right: 0; }\n\n.carousel-page {\n  display: -ms-flexbox;\n  display: flex;\n  -ms-flex-pack: center;\n      justify-content: center;\n  width: 100%;\n  margin-top: 12px; }\n  .carousel-page .carousel-page-item {\n    width: 18px;\n    height: 5px;\n    margin: 0 3px;\n    padding-bottom: 3px;\n    cursor: pointer; }\n    .carousel-page .carousel-page-item .carousel-page-link {\n      display: block;\n      height: 100%;\n      background-color: #c8c8c8; }\n\n/* 推荐页标题 */\n.re-item-title {\n  font-family: '\\5FAE\\8F6F\\96C5\\9ED1';\n  font-size: 18px;\n  margin: 0;\n  line-height: 36px;\n  border-bottom: 1px solid #ddd;\n  color: #333;\n  margin-bottom: 10px; }\n\n/* 推荐页面更多链接 */\n.recommend-detail-link {\n  color: #666;\n  font-size: 12px; }\n  .recommend-detail-link:hover {\n    color: #444; }\n\n/* 推荐歌单 */\n.re-song-menu .re-song-menu-list {\n  display: -ms-flexbox;\n  display: flex;\n  -ms-flex-wrap: wrap;\n      flex-wrap: wrap;\n  -ms-flex-pack: justify;\n      justify-content: space-between;\n  margin-left: -18px; }\n  .re-song-menu .re-song-menu-list .re-song-menu-item {\n    position: relative;\n    -ms-flex-preferred-size: 20%;\n        flex-basis: 20%;\n    padding-left: 18px; }\n    .re-song-menu .re-song-menu-list .re-song-menu-item .re-song-img {\n      width: 100%;\n      border: 1px solid rgba(0, 0, 0, 0.1); }\n    .re-song-menu .re-song-menu-list .re-song-menu-item .re-song-title {\n      height: 78px;\n      margin: 0;\n      line-height: 20px; }\n    .re-song-menu .re-song-menu-list .re-song-menu-item .re-song-num-bar {\n      position: absolute;\n      top: 0;\n      right: 0;\n      background: linear-gradient(to right, transparent, rgba(0, 0, 0, 0.3));\n      color: #fff;\n      width: 55%;\n      line-height: 20px;\n      text-align: right;\n      padding-right: 7px; }\n      .re-song-menu .re-song-menu-list .re-song-menu-item .re-song-num-bar .re-song-num-icon {\n        font-size: 12px; }\n      .re-song-menu .re-song-menu-list .re-song-menu-item .re-song-num-bar .re-song-num {\n        font-family: '\\5FAE\\8F6F\\96C5\\9ED1';\n        text-shadow: 1px 1px 1px #444; }\n    .re-song-menu .re-song-menu-list .re-song-menu-item .re-play-icon {\n      position: absolute;\n      right: 6px;\n      bottom: 6px;\n      font-size: 26px;\n      opacity: 0;\n      transition: opacity 300ms;\n      transition: background-color 200ms; }\n    .re-song-menu .re-song-menu-list .re-song-menu-item .re-song-item-link {\n      display: block;\n      position: relative;\n      line-height: 0;\n      margin-bottom: 3px; }\n      .re-song-menu .re-song-menu-list .re-song-menu-item .re-song-item-link:hover .re-play-icon {\n        opacity: 1; }\n      .re-song-menu .re-song-menu-list .re-song-menu-item .re-song-item-link .re-play-icon:hover {\n        background-color: rgba(0, 0, 0, 0.5); }\n\n.start-play-icon {\n  color: #fff;\n  background: rgba(0, 0, 0, 0.3);\n  border-radius: 50%; }\n\n/* 新碟列表 */\n.re-new-music-list {\n  display: -ms-flexbox;\n  display: flex;\n  -ms-flex-direction: column;\n      flex-direction: column;\n  -ms-flex-wrap: wrap;\n      flex-wrap: wrap;\n  height: 302px;\n  border: 1px solid #eeeeee;\n  border-right: 0;\n  margin-bottom: 50px; }\n  .re-new-music-list .re-new-music-item {\n    -ms-flex: 0 0 20%;\n        flex: 0 0 20%;\n    height: 60px;\n    display: -ms-flexbox;\n    display: flex;\n    -ms-flex-align: center;\n        align-items: center;\n    border-right: 1px solid #eeeeee; }\n    .re-new-music-list .re-new-music-item:nth-child(2n) {\n      background: #f5f5f7; }\n    .re-new-music-list .re-new-music-item:nth-child(5) ~ .re-new-music-item:nth-child(2n) {\n      background: transparent; }\n    .re-new-music-list .re-new-music-item:nth-child(5) ~ .re-new-music-item:nth-child(2n-1) {\n      background: #f5f5f7; }\n    .re-new-music-list .re-new-music-item:hover {\n      background: #ecedee !important; }\n    .re-new-music-list .re-new-music-item .re-new-music-index {\n      font-family: '\\5FAE\\8F6F\\96C5\\9ED1';\n      width: 40px;\n      text-align: center;\n      color: #aaa; }\n    .re-new-music-list .re-new-music-item .re-music-pic {\n      display: block;\n      width: 40px;\n      height: 40px;\n      position: relative; }\n    .re-new-music-list .re-new-music-item .re-music-img {\n      width: 100%;\n      height: 100%; }\n    .re-new-music-list .re-new-music-item .re-music-play-icon {\n      position: absolute;\n      top: 9px;\n      left: 9px;\n      font-size: 22px;\n      transition: background 400ms; }\n      .re-new-music-list .re-new-music-item .re-music-play-icon:hover {\n        background: rgba(0, 0, 0, 0.5); }\n    .re-new-music-list .re-new-music-item .re-new-music-name, .re-new-music-list .re-new-music-item .re-new-music-singer {\n      line-height: 20px;\n      margin: 0;\n      padding-left: 10px; }\n    .re-new-music-list .re-new-music-item .re-new-music-singer {\n      color: #888; }\n\n/* 推荐mv */\n.re-mv {\n  margin-bottom: 50px; }\n  .re-mv .re-mv-list {\n    display: -ms-flexbox;\n    display: flex;\n    margin-left: -18px; }\n    .re-mv .re-mv-list .re-mv-item {\n      -ms-flex: 1;\n          flex: 1;\n      margin-left: 18px; }\n      .re-mv .re-mv-list .re-mv-item .re-mv-link {\n        display: block;\n        position: relative;\n        width: 100%;\n        padding-top: 56%; }\n        .re-mv .re-mv-list .re-mv-item .re-mv-link .re-mv-img {\n          position: absolute;\n          top: 0;\n          width: 100%;\n          height: 100%;\n          border: 1px solid rgba(0, 0, 0, 0.1); }\n  .re-mv .re-mv-item-title, .re-mv .re-mv-item-singer {\n    margin: 0;\n    line-height: 20px; }\n  .re-mv .re-mv-item-title {\n    font-family: '\\5FAE\\8F6F\\96C5\\9ED1'; }\n  .re-mv .re-mv-item-singer {\n    color: #777; }\n", ""]);
 
 	// exports
 
 
 /***/ },
-/* 131 */
+/* 167 */
 /***/ function(module, exports) {
 
 	/*
@@ -24743,7 +28091,7 @@
 
 
 /***/ },
-/* 132 */
+/* 168 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/*
@@ -24993,1549 +28341,6 @@
 			URL.revokeObjectURL(oldSrc);
 	}
 
-
-/***/ },
-/* 133 */
-/***/ function(module, exports) {
-
-	/*!
-	 * vue-resource v1.0.3
-	 * https://github.com/vuejs/vue-resource
-	 * Released under the MIT License.
-	 */
-
-	'use strict';
-
-	/**
-	 * Promises/A+ polyfill v1.1.4 (https://github.com/bramstein/promis)
-	 */
-
-	var RESOLVED = 0;
-	var REJECTED = 1;
-	var PENDING = 2;
-
-	function Promise$1(executor) {
-
-	    this.state = PENDING;
-	    this.value = undefined;
-	    this.deferred = [];
-
-	    var promise = this;
-
-	    try {
-	        executor(function (x) {
-	            promise.resolve(x);
-	        }, function (r) {
-	            promise.reject(r);
-	        });
-	    } catch (e) {
-	        promise.reject(e);
-	    }
-	}
-
-	Promise$1.reject = function (r) {
-	    return new Promise$1(function (resolve, reject) {
-	        reject(r);
-	    });
-	};
-
-	Promise$1.resolve = function (x) {
-	    return new Promise$1(function (resolve, reject) {
-	        resolve(x);
-	    });
-	};
-
-	Promise$1.all = function all(iterable) {
-	    return new Promise$1(function (resolve, reject) {
-	        var count = 0,
-	            result = [];
-
-	        if (iterable.length === 0) {
-	            resolve(result);
-	        }
-
-	        function resolver(i) {
-	            return function (x) {
-	                result[i] = x;
-	                count += 1;
-
-	                if (count === iterable.length) {
-	                    resolve(result);
-	                }
-	            };
-	        }
-
-	        for (var i = 0; i < iterable.length; i += 1) {
-	            Promise$1.resolve(iterable[i]).then(resolver(i), reject);
-	        }
-	    });
-	};
-
-	Promise$1.race = function race(iterable) {
-	    return new Promise$1(function (resolve, reject) {
-	        for (var i = 0; i < iterable.length; i += 1) {
-	            Promise$1.resolve(iterable[i]).then(resolve, reject);
-	        }
-	    });
-	};
-
-	var p$1 = Promise$1.prototype;
-
-	p$1.resolve = function resolve(x) {
-	    var promise = this;
-
-	    if (promise.state === PENDING) {
-	        if (x === promise) {
-	            throw new TypeError('Promise settled with itself.');
-	        }
-
-	        var called = false;
-
-	        try {
-	            var then = x && x['then'];
-
-	            if (x !== null && typeof x === 'object' && typeof then === 'function') {
-	                then.call(x, function (x) {
-	                    if (!called) {
-	                        promise.resolve(x);
-	                    }
-	                    called = true;
-	                }, function (r) {
-	                    if (!called) {
-	                        promise.reject(r);
-	                    }
-	                    called = true;
-	                });
-	                return;
-	            }
-	        } catch (e) {
-	            if (!called) {
-	                promise.reject(e);
-	            }
-	            return;
-	        }
-
-	        promise.state = RESOLVED;
-	        promise.value = x;
-	        promise.notify();
-	    }
-	};
-
-	p$1.reject = function reject(reason) {
-	    var promise = this;
-
-	    if (promise.state === PENDING) {
-	        if (reason === promise) {
-	            throw new TypeError('Promise settled with itself.');
-	        }
-
-	        promise.state = REJECTED;
-	        promise.value = reason;
-	        promise.notify();
-	    }
-	};
-
-	p$1.notify = function notify() {
-	    var promise = this;
-
-	    nextTick(function () {
-	        if (promise.state !== PENDING) {
-	            while (promise.deferred.length) {
-	                var deferred = promise.deferred.shift(),
-	                    onResolved = deferred[0],
-	                    onRejected = deferred[1],
-	                    resolve = deferred[2],
-	                    reject = deferred[3];
-
-	                try {
-	                    if (promise.state === RESOLVED) {
-	                        if (typeof onResolved === 'function') {
-	                            resolve(onResolved.call(undefined, promise.value));
-	                        } else {
-	                            resolve(promise.value);
-	                        }
-	                    } else if (promise.state === REJECTED) {
-	                        if (typeof onRejected === 'function') {
-	                            resolve(onRejected.call(undefined, promise.value));
-	                        } else {
-	                            reject(promise.value);
-	                        }
-	                    }
-	                } catch (e) {
-	                    reject(e);
-	                }
-	            }
-	        }
-	    });
-	};
-
-	p$1.then = function then(onResolved, onRejected) {
-	    var promise = this;
-
-	    return new Promise$1(function (resolve, reject) {
-	        promise.deferred.push([onResolved, onRejected, resolve, reject]);
-	        promise.notify();
-	    });
-	};
-
-	p$1.catch = function (onRejected) {
-	    return this.then(undefined, onRejected);
-	};
-
-	/**
-	 * Promise adapter.
-	 */
-
-	if (typeof Promise === 'undefined') {
-	    window.Promise = Promise$1;
-	}
-
-	function PromiseObj(executor, context) {
-
-	    if (executor instanceof Promise) {
-	        this.promise = executor;
-	    } else {
-	        this.promise = new Promise(executor.bind(context));
-	    }
-
-	    this.context = context;
-	}
-
-	PromiseObj.all = function (iterable, context) {
-	    return new PromiseObj(Promise.all(iterable), context);
-	};
-
-	PromiseObj.resolve = function (value, context) {
-	    return new PromiseObj(Promise.resolve(value), context);
-	};
-
-	PromiseObj.reject = function (reason, context) {
-	    return new PromiseObj(Promise.reject(reason), context);
-	};
-
-	PromiseObj.race = function (iterable, context) {
-	    return new PromiseObj(Promise.race(iterable), context);
-	};
-
-	var p = PromiseObj.prototype;
-
-	p.bind = function (context) {
-	    this.context = context;
-	    return this;
-	};
-
-	p.then = function (fulfilled, rejected) {
-
-	    if (fulfilled && fulfilled.bind && this.context) {
-	        fulfilled = fulfilled.bind(this.context);
-	    }
-
-	    if (rejected && rejected.bind && this.context) {
-	        rejected = rejected.bind(this.context);
-	    }
-
-	    return new PromiseObj(this.promise.then(fulfilled, rejected), this.context);
-	};
-
-	p.catch = function (rejected) {
-
-	    if (rejected && rejected.bind && this.context) {
-	        rejected = rejected.bind(this.context);
-	    }
-
-	    return new PromiseObj(this.promise.catch(rejected), this.context);
-	};
-
-	p.finally = function (callback) {
-
-	    return this.then(function (value) {
-	        callback.call(this);
-	        return value;
-	    }, function (reason) {
-	        callback.call(this);
-	        return Promise.reject(reason);
-	    });
-	};
-
-	/**
-	 * Utility functions.
-	 */
-
-	var debug = false;var util = {};var slice = [].slice;
-
-
-	function Util (Vue) {
-	    util = Vue.util;
-	    debug = Vue.config.debug || !Vue.config.silent;
-	}
-
-	function warn(msg) {
-	    if (typeof console !== 'undefined' && debug) {
-	        console.warn('[VueResource warn]: ' + msg);
-	    }
-	}
-
-	function error(msg) {
-	    if (typeof console !== 'undefined') {
-	        console.error(msg);
-	    }
-	}
-
-	function nextTick(cb, ctx) {
-	    return util.nextTick(cb, ctx);
-	}
-
-	function trim(str) {
-	    return str.replace(/^\s*|\s*$/g, '');
-	}
-
-	function toLower(str) {
-	    return str ? str.toLowerCase() : '';
-	}
-
-	function toUpper(str) {
-	    return str ? str.toUpperCase() : '';
-	}
-
-	var isArray = Array.isArray;
-
-	function isString(val) {
-	    return typeof val === 'string';
-	}
-
-	function isBoolean(val) {
-	    return val === true || val === false;
-	}
-
-	function isFunction(val) {
-	    return typeof val === 'function';
-	}
-
-	function isObject(obj) {
-	    return obj !== null && typeof obj === 'object';
-	}
-
-	function isPlainObject(obj) {
-	    return isObject(obj) && Object.getPrototypeOf(obj) == Object.prototype;
-	}
-
-	function isBlob(obj) {
-	    return typeof Blob !== 'undefined' && obj instanceof Blob;
-	}
-
-	function isFormData(obj) {
-	    return typeof FormData !== 'undefined' && obj instanceof FormData;
-	}
-
-	function when(value, fulfilled, rejected) {
-
-	    var promise = PromiseObj.resolve(value);
-
-	    if (arguments.length < 2) {
-	        return promise;
-	    }
-
-	    return promise.then(fulfilled, rejected);
-	}
-
-	function options(fn, obj, opts) {
-
-	    opts = opts || {};
-
-	    if (isFunction(opts)) {
-	        opts = opts.call(obj);
-	    }
-
-	    return merge(fn.bind({ $vm: obj, $options: opts }), fn, { $options: opts });
-	}
-
-	function each(obj, iterator) {
-
-	    var i, key;
-
-	    if (obj && typeof obj.length == 'number') {
-	        for (i = 0; i < obj.length; i++) {
-	            iterator.call(obj[i], obj[i], i);
-	        }
-	    } else if (isObject(obj)) {
-	        for (key in obj) {
-	            if (obj.hasOwnProperty(key)) {
-	                iterator.call(obj[key], obj[key], key);
-	            }
-	        }
-	    }
-
-	    return obj;
-	}
-
-	var assign = Object.assign || _assign;
-
-	function merge(target) {
-
-	    var args = slice.call(arguments, 1);
-
-	    args.forEach(function (source) {
-	        _merge(target, source, true);
-	    });
-
-	    return target;
-	}
-
-	function defaults(target) {
-
-	    var args = slice.call(arguments, 1);
-
-	    args.forEach(function (source) {
-
-	        for (var key in source) {
-	            if (target[key] === undefined) {
-	                target[key] = source[key];
-	            }
-	        }
-	    });
-
-	    return target;
-	}
-
-	function _assign(target) {
-
-	    var args = slice.call(arguments, 1);
-
-	    args.forEach(function (source) {
-	        _merge(target, source);
-	    });
-
-	    return target;
-	}
-
-	function _merge(target, source, deep) {
-	    for (var key in source) {
-	        if (deep && (isPlainObject(source[key]) || isArray(source[key]))) {
-	            if (isPlainObject(source[key]) && !isPlainObject(target[key])) {
-	                target[key] = {};
-	            }
-	            if (isArray(source[key]) && !isArray(target[key])) {
-	                target[key] = [];
-	            }
-	            _merge(target[key], source[key], deep);
-	        } else if (source[key] !== undefined) {
-	            target[key] = source[key];
-	        }
-	    }
-	}
-
-	/**
-	 * Root Prefix Transform.
-	 */
-
-	function root (options, next) {
-
-	    var url = next(options);
-
-	    if (isString(options.root) && !url.match(/^(https?:)?\//)) {
-	        url = options.root + '/' + url;
-	    }
-
-	    return url;
-	}
-
-	/**
-	 * Query Parameter Transform.
-	 */
-
-	function query (options, next) {
-
-	    var urlParams = Object.keys(Url.options.params),
-	        query = {},
-	        url = next(options);
-
-	    each(options.params, function (value, key) {
-	        if (urlParams.indexOf(key) === -1) {
-	            query[key] = value;
-	        }
-	    });
-
-	    query = Url.params(query);
-
-	    if (query) {
-	        url += (url.indexOf('?') == -1 ? '?' : '&') + query;
-	    }
-
-	    return url;
-	}
-
-	/**
-	 * URL Template v2.0.6 (https://github.com/bramstein/url-template)
-	 */
-
-	function expand(url, params, variables) {
-
-	    var tmpl = parse(url),
-	        expanded = tmpl.expand(params);
-
-	    if (variables) {
-	        variables.push.apply(variables, tmpl.vars);
-	    }
-
-	    return expanded;
-	}
-
-	function parse(template) {
-
-	    var operators = ['+', '#', '.', '/', ';', '?', '&'],
-	        variables = [];
-
-	    return {
-	        vars: variables,
-	        expand: function (context) {
-	            return template.replace(/\{([^\{\}]+)\}|([^\{\}]+)/g, function (_, expression, literal) {
-	                if (expression) {
-
-	                    var operator = null,
-	                        values = [];
-
-	                    if (operators.indexOf(expression.charAt(0)) !== -1) {
-	                        operator = expression.charAt(0);
-	                        expression = expression.substr(1);
-	                    }
-
-	                    expression.split(/,/g).forEach(function (variable) {
-	                        var tmp = /([^:\*]*)(?::(\d+)|(\*))?/.exec(variable);
-	                        values.push.apply(values, getValues(context, operator, tmp[1], tmp[2] || tmp[3]));
-	                        variables.push(tmp[1]);
-	                    });
-
-	                    if (operator && operator !== '+') {
-
-	                        var separator = ',';
-
-	                        if (operator === '?') {
-	                            separator = '&';
-	                        } else if (operator !== '#') {
-	                            separator = operator;
-	                        }
-
-	                        return (values.length !== 0 ? operator : '') + values.join(separator);
-	                    } else {
-	                        return values.join(',');
-	                    }
-	                } else {
-	                    return encodeReserved(literal);
-	                }
-	            });
-	        }
-	    };
-	}
-
-	function getValues(context, operator, key, modifier) {
-
-	    var value = context[key],
-	        result = [];
-
-	    if (isDefined(value) && value !== '') {
-	        if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
-	            value = value.toString();
-
-	            if (modifier && modifier !== '*') {
-	                value = value.substring(0, parseInt(modifier, 10));
-	            }
-
-	            result.push(encodeValue(operator, value, isKeyOperator(operator) ? key : null));
-	        } else {
-	            if (modifier === '*') {
-	                if (Array.isArray(value)) {
-	                    value.filter(isDefined).forEach(function (value) {
-	                        result.push(encodeValue(operator, value, isKeyOperator(operator) ? key : null));
-	                    });
-	                } else {
-	                    Object.keys(value).forEach(function (k) {
-	                        if (isDefined(value[k])) {
-	                            result.push(encodeValue(operator, value[k], k));
-	                        }
-	                    });
-	                }
-	            } else {
-	                var tmp = [];
-
-	                if (Array.isArray(value)) {
-	                    value.filter(isDefined).forEach(function (value) {
-	                        tmp.push(encodeValue(operator, value));
-	                    });
-	                } else {
-	                    Object.keys(value).forEach(function (k) {
-	                        if (isDefined(value[k])) {
-	                            tmp.push(encodeURIComponent(k));
-	                            tmp.push(encodeValue(operator, value[k].toString()));
-	                        }
-	                    });
-	                }
-
-	                if (isKeyOperator(operator)) {
-	                    result.push(encodeURIComponent(key) + '=' + tmp.join(','));
-	                } else if (tmp.length !== 0) {
-	                    result.push(tmp.join(','));
-	                }
-	            }
-	        }
-	    } else {
-	        if (operator === ';') {
-	            result.push(encodeURIComponent(key));
-	        } else if (value === '' && (operator === '&' || operator === '?')) {
-	            result.push(encodeURIComponent(key) + '=');
-	        } else if (value === '') {
-	            result.push('');
-	        }
-	    }
-
-	    return result;
-	}
-
-	function isDefined(value) {
-	    return value !== undefined && value !== null;
-	}
-
-	function isKeyOperator(operator) {
-	    return operator === ';' || operator === '&' || operator === '?';
-	}
-
-	function encodeValue(operator, value, key) {
-
-	    value = operator === '+' || operator === '#' ? encodeReserved(value) : encodeURIComponent(value);
-
-	    if (key) {
-	        return encodeURIComponent(key) + '=' + value;
-	    } else {
-	        return value;
-	    }
-	}
-
-	function encodeReserved(str) {
-	    return str.split(/(%[0-9A-Fa-f]{2})/g).map(function (part) {
-	        if (!/%[0-9A-Fa-f]/.test(part)) {
-	            part = encodeURI(part);
-	        }
-	        return part;
-	    }).join('');
-	}
-
-	/**
-	 * URL Template (RFC 6570) Transform.
-	 */
-
-	function template (options) {
-
-	    var variables = [],
-	        url = expand(options.url, options.params, variables);
-
-	    variables.forEach(function (key) {
-	        delete options.params[key];
-	    });
-
-	    return url;
-	}
-
-	/**
-	 * Service for URL templating.
-	 */
-
-	var ie = document.documentMode;
-	var el = document.createElement('a');
-
-	function Url(url, params) {
-
-	    var self = this || {},
-	        options = url,
-	        transform;
-
-	    if (isString(url)) {
-	        options = { url: url, params: params };
-	    }
-
-	    options = merge({}, Url.options, self.$options, options);
-
-	    Url.transforms.forEach(function (handler) {
-	        transform = factory(handler, transform, self.$vm);
-	    });
-
-	    return transform(options);
-	}
-
-	/**
-	 * Url options.
-	 */
-
-	Url.options = {
-	    url: '',
-	    root: null,
-	    params: {}
-	};
-
-	/**
-	 * Url transforms.
-	 */
-
-	Url.transforms = [template, query, root];
-
-	/**
-	 * Encodes a Url parameter string.
-	 *
-	 * @param {Object} obj
-	 */
-
-	Url.params = function (obj) {
-
-	    var params = [],
-	        escape = encodeURIComponent;
-
-	    params.add = function (key, value) {
-
-	        if (isFunction(value)) {
-	            value = value();
-	        }
-
-	        if (value === null) {
-	            value = '';
-	        }
-
-	        this.push(escape(key) + '=' + escape(value));
-	    };
-
-	    serialize(params, obj);
-
-	    return params.join('&').replace(/%20/g, '+');
-	};
-
-	/**
-	 * Parse a URL and return its components.
-	 *
-	 * @param {String} url
-	 */
-
-	Url.parse = function (url) {
-
-	    if (ie) {
-	        el.href = url;
-	        url = el.href;
-	    }
-
-	    el.href = url;
-
-	    return {
-	        href: el.href,
-	        protocol: el.protocol ? el.protocol.replace(/:$/, '') : '',
-	        port: el.port,
-	        host: el.host,
-	        hostname: el.hostname,
-	        pathname: el.pathname.charAt(0) === '/' ? el.pathname : '/' + el.pathname,
-	        search: el.search ? el.search.replace(/^\?/, '') : '',
-	        hash: el.hash ? el.hash.replace(/^#/, '') : ''
-	    };
-	};
-
-	function factory(handler, next, vm) {
-	    return function (options) {
-	        return handler.call(vm, options, next);
-	    };
-	}
-
-	function serialize(params, obj, scope) {
-
-	    var array = isArray(obj),
-	        plain = isPlainObject(obj),
-	        hash;
-
-	    each(obj, function (value, key) {
-
-	        hash = isObject(value) || isArray(value);
-
-	        if (scope) {
-	            key = scope + '[' + (plain || hash ? key : '') + ']';
-	        }
-
-	        if (!scope && array) {
-	            params.add(value.name, value.value);
-	        } else if (hash) {
-	            serialize(params, value, key);
-	        } else {
-	            params.add(key, value);
-	        }
-	    });
-	}
-
-	/**
-	 * XDomain client (Internet Explorer).
-	 */
-
-	function xdrClient (request) {
-	    return new PromiseObj(function (resolve) {
-
-	        var xdr = new XDomainRequest(),
-	            handler = function (_ref) {
-	            var type = _ref.type;
-
-
-	            var status = 0;
-
-	            if (type === 'load') {
-	                status = 200;
-	            } else if (type === 'error') {
-	                status = 500;
-	            }
-
-	            resolve(request.respondWith(xdr.responseText, { status: status }));
-	        };
-
-	        request.abort = function () {
-	            return xdr.abort();
-	        };
-
-	        xdr.open(request.method, request.getUrl());
-	        xdr.timeout = 0;
-	        xdr.onload = handler;
-	        xdr.onerror = handler;
-	        xdr.ontimeout = handler;
-	        xdr.onprogress = function () {};
-	        xdr.send(request.getBody());
-	    });
-	}
-
-	/**
-	 * CORS Interceptor.
-	 */
-
-	var ORIGIN_URL = Url.parse(location.href);
-	var SUPPORTS_CORS = 'withCredentials' in new XMLHttpRequest();
-
-	function cors (request, next) {
-
-	    if (!isBoolean(request.crossOrigin) && crossOrigin(request)) {
-	        request.crossOrigin = true;
-	    }
-
-	    if (request.crossOrigin) {
-
-	        if (!SUPPORTS_CORS) {
-	            request.client = xdrClient;
-	        }
-
-	        delete request.emulateHTTP;
-	    }
-
-	    next();
-	}
-
-	function crossOrigin(request) {
-
-	    var requestUrl = Url.parse(Url(request));
-
-	    return requestUrl.protocol !== ORIGIN_URL.protocol || requestUrl.host !== ORIGIN_URL.host;
-	}
-
-	/**
-	 * Body Interceptor.
-	 */
-
-	function body (request, next) {
-
-	    if (isFormData(request.body)) {
-
-	        request.headers.delete('Content-Type');
-	    } else if (isObject(request.body) || isArray(request.body)) {
-
-	        if (request.emulateJSON) {
-	            request.body = Url.params(request.body);
-	            request.headers.set('Content-Type', 'application/x-www-form-urlencoded');
-	        } else {
-	            request.body = JSON.stringify(request.body);
-	        }
-	    }
-
-	    next(function (response) {
-
-	        Object.defineProperty(response, 'data', {
-	            get: function () {
-	                return this.body;
-	            },
-	            set: function (body) {
-	                this.body = body;
-	            }
-	        });
-
-	        return response.bodyText ? when(response.text(), function (text) {
-
-	            var type = response.headers.get('Content-Type');
-
-	            if (isString(type) && type.indexOf('application/json') === 0) {
-
-	                try {
-	                    response.body = JSON.parse(text);
-	                } catch (e) {
-	                    response.body = null;
-	                }
-	            } else {
-	                response.body = text;
-	            }
-
-	            return response;
-	        }) : response;
-	    });
-	}
-
-	/**
-	 * JSONP client.
-	 */
-
-	function jsonpClient (request) {
-	    return new PromiseObj(function (resolve) {
-
-	        var name = request.jsonp || 'callback',
-	            callback = '_jsonp' + Math.random().toString(36).substr(2),
-	            body = null,
-	            handler,
-	            script;
-
-	        handler = function (_ref) {
-	            var type = _ref.type;
-
-
-	            var status = 0;
-
-	            if (type === 'load' && body !== null) {
-	                status = 200;
-	            } else if (type === 'error') {
-	                status = 500;
-	            }
-
-	            resolve(request.respondWith(body, { status: status }));
-
-	            delete window[callback];
-	            document.body.removeChild(script);
-	        };
-
-	        request.params[name] = callback;
-
-	        window[callback] = function (result) {
-	            body = JSON.stringify(result);
-	        };
-
-	        script = document.createElement('script');
-	        script.src = request.getUrl();
-	        script.type = 'text/javascript';
-	        script.async = true;
-	        script.onload = handler;
-	        script.onerror = handler;
-
-	        document.body.appendChild(script);
-	    });
-	}
-
-	/**
-	 * JSONP Interceptor.
-	 */
-
-	function jsonp (request, next) {
-
-	    if (request.method == 'JSONP') {
-	        request.client = jsonpClient;
-	    }
-
-	    next(function (response) {
-
-	        if (request.method == 'JSONP') {
-
-	            return when(response.json(), function (json) {
-
-	                response.body = json;
-
-	                return response;
-	            });
-	        }
-	    });
-	}
-
-	/**
-	 * Before Interceptor.
-	 */
-
-	function before (request, next) {
-
-	    if (isFunction(request.before)) {
-	        request.before.call(this, request);
-	    }
-
-	    next();
-	}
-
-	/**
-	 * HTTP method override Interceptor.
-	 */
-
-	function method (request, next) {
-
-	    if (request.emulateHTTP && /^(PUT|PATCH|DELETE)$/i.test(request.method)) {
-	        request.headers.set('X-HTTP-Method-Override', request.method);
-	        request.method = 'POST';
-	    }
-
-	    next();
-	}
-
-	/**
-	 * Header Interceptor.
-	 */
-
-	function header (request, next) {
-
-	    var headers = assign({}, Http.headers.common, !request.crossOrigin ? Http.headers.custom : {}, Http.headers[toLower(request.method)]);
-
-	    each(headers, function (value, name) {
-	        if (!request.headers.has(name)) {
-	            request.headers.set(name, value);
-	        }
-	    });
-
-	    next();
-	}
-
-	/**
-	 * Timeout Interceptor.
-	 */
-
-	function timeout (request, next) {
-
-	    var timeout;
-
-	    if (request.timeout) {
-	        timeout = setTimeout(function () {
-	            request.abort();
-	        }, request.timeout);
-	    }
-
-	    next(function (response) {
-
-	        clearTimeout(timeout);
-	    });
-	}
-
-	/**
-	 * XMLHttp client.
-	 */
-
-	function xhrClient (request) {
-	    return new PromiseObj(function (resolve) {
-
-	        var xhr = new XMLHttpRequest(),
-	            handler = function (event) {
-
-	            var response = request.respondWith('response' in xhr ? xhr.response : xhr.responseText, {
-	                status: xhr.status === 1223 ? 204 : xhr.status, // IE9 status bug
-	                statusText: xhr.status === 1223 ? 'No Content' : trim(xhr.statusText)
-	            });
-
-	            each(trim(xhr.getAllResponseHeaders()).split('\n'), function (row) {
-	                response.headers.append(row.slice(0, row.indexOf(':')), row.slice(row.indexOf(':') + 1));
-	            });
-
-	            resolve(response);
-	        };
-
-	        request.abort = function () {
-	            return xhr.abort();
-	        };
-
-	        if (request.progress) {
-	            if (request.method === 'GET') {
-	                xhr.addEventListener('progress', request.progress);
-	            } else if (/^(POST|PUT)$/i.test(request.method)) {
-	                xhr.upload.addEventListener('progress', request.progress);
-	            }
-	        }
-
-	        xhr.open(request.method, request.getUrl(), true);
-
-	        if ('responseType' in xhr) {
-	            xhr.responseType = 'blob';
-	        }
-
-	        if (request.credentials === true) {
-	            xhr.withCredentials = true;
-	        }
-
-	        request.headers.forEach(function (value, name) {
-	            xhr.setRequestHeader(name, value);
-	        });
-
-	        xhr.timeout = 0;
-	        xhr.onload = handler;
-	        xhr.onerror = handler;
-	        xhr.send(request.getBody());
-	    });
-	}
-
-	/**
-	 * Base client.
-	 */
-
-	function Client (context) {
-
-	    var reqHandlers = [sendRequest],
-	        resHandlers = [],
-	        handler;
-
-	    if (!isObject(context)) {
-	        context = null;
-	    }
-
-	    function Client(request) {
-	        return new PromiseObj(function (resolve) {
-
-	            function exec() {
-
-	                handler = reqHandlers.pop();
-
-	                if (isFunction(handler)) {
-	                    handler.call(context, request, next);
-	                } else {
-	                    warn('Invalid interceptor of type ' + typeof handler + ', must be a function');
-	                    next();
-	                }
-	            }
-
-	            function next(response) {
-
-	                if (isFunction(response)) {
-
-	                    resHandlers.unshift(response);
-	                } else if (isObject(response)) {
-
-	                    resHandlers.forEach(function (handler) {
-	                        response = when(response, function (response) {
-	                            return handler.call(context, response) || response;
-	                        });
-	                    });
-
-	                    when(response, resolve);
-
-	                    return;
-	                }
-
-	                exec();
-	            }
-
-	            exec();
-	        }, context);
-	    }
-
-	    Client.use = function (handler) {
-	        reqHandlers.push(handler);
-	    };
-
-	    return Client;
-	}
-
-	function sendRequest(request, resolve) {
-
-	    var client = request.client || xhrClient;
-
-	    resolve(client(request));
-	}
-
-	var classCallCheck = function (instance, Constructor) {
-	  if (!(instance instanceof Constructor)) {
-	    throw new TypeError("Cannot call a class as a function");
-	  }
-	};
-
-	/**
-	 * HTTP Headers.
-	 */
-
-	var Headers = function () {
-	    function Headers(headers) {
-	        var _this = this;
-
-	        classCallCheck(this, Headers);
-
-
-	        this.map = {};
-
-	        each(headers, function (value, name) {
-	            return _this.append(name, value);
-	        });
-	    }
-
-	    Headers.prototype.has = function has(name) {
-	        return getName(this.map, name) !== null;
-	    };
-
-	    Headers.prototype.get = function get(name) {
-
-	        var list = this.map[getName(this.map, name)];
-
-	        return list ? list[0] : null;
-	    };
-
-	    Headers.prototype.getAll = function getAll(name) {
-	        return this.map[getName(this.map, name)] || [];
-	    };
-
-	    Headers.prototype.set = function set(name, value) {
-	        this.map[normalizeName(getName(this.map, name) || name)] = [trim(value)];
-	    };
-
-	    Headers.prototype.append = function append(name, value) {
-
-	        var list = this.getAll(name);
-
-	        if (list.length) {
-	            list.push(trim(value));
-	        } else {
-	            this.set(name, value);
-	        }
-	    };
-
-	    Headers.prototype.delete = function _delete(name) {
-	        delete this.map[getName(this.map, name)];
-	    };
-
-	    Headers.prototype.forEach = function forEach(callback, thisArg) {
-	        var _this2 = this;
-
-	        each(this.map, function (list, name) {
-	            each(list, function (value) {
-	                return callback.call(thisArg, value, name, _this2);
-	            });
-	        });
-	    };
-
-	    return Headers;
-	}();
-
-	function getName(map, name) {
-	    return Object.keys(map).reduce(function (prev, curr) {
-	        return toLower(name) === toLower(curr) ? curr : prev;
-	    }, null);
-	}
-
-	function normalizeName(name) {
-
-	    if (/[^a-z0-9\-#$%&'*+.\^_`|~]/i.test(name)) {
-	        throw new TypeError('Invalid character in header field name');
-	    }
-
-	    return trim(name);
-	}
-
-	/**
-	 * HTTP Response.
-	 */
-
-	var Response = function () {
-	    function Response(body, _ref) {
-	        var url = _ref.url;
-	        var headers = _ref.headers;
-	        var status = _ref.status;
-	        var statusText = _ref.statusText;
-	        classCallCheck(this, Response);
-
-
-	        this.url = url;
-	        this.ok = status >= 200 && status < 300;
-	        this.status = status || 0;
-	        this.statusText = statusText || '';
-	        this.headers = new Headers(headers);
-	        this.body = body;
-
-	        if (isString(body)) {
-
-	            this.bodyText = body;
-	        } else if (isBlob(body)) {
-
-	            this.bodyBlob = body;
-
-	            if (isBlobText(body)) {
-	                this.bodyText = blobText(body);
-	            }
-	        }
-	    }
-
-	    Response.prototype.blob = function blob() {
-	        return when(this.bodyBlob);
-	    };
-
-	    Response.prototype.text = function text() {
-	        return when(this.bodyText);
-	    };
-
-	    Response.prototype.json = function json() {
-	        return when(this.text(), function (text) {
-	            return JSON.parse(text);
-	        });
-	    };
-
-	    return Response;
-	}();
-
-	function blobText(body) {
-	    return new PromiseObj(function (resolve) {
-
-	        var reader = new FileReader();
-
-	        reader.readAsText(body);
-	        reader.onload = function () {
-	            resolve(reader.result);
-	        };
-	    });
-	}
-
-	function isBlobText(body) {
-	    return body.type.indexOf('text') === 0 || body.type.indexOf('json') !== -1;
-	}
-
-	/**
-	 * HTTP Request.
-	 */
-
-	var Request = function () {
-	    function Request(options) {
-	        classCallCheck(this, Request);
-
-
-	        this.body = null;
-	        this.params = {};
-
-	        assign(this, options, {
-	            method: toUpper(options.method || 'GET')
-	        });
-
-	        if (!(this.headers instanceof Headers)) {
-	            this.headers = new Headers(this.headers);
-	        }
-	    }
-
-	    Request.prototype.getUrl = function getUrl() {
-	        return Url(this);
-	    };
-
-	    Request.prototype.getBody = function getBody() {
-	        return this.body;
-	    };
-
-	    Request.prototype.respondWith = function respondWith(body, options) {
-	        return new Response(body, assign(options || {}, { url: this.getUrl() }));
-	    };
-
-	    return Request;
-	}();
-
-	/**
-	 * Service for sending network requests.
-	 */
-
-	var CUSTOM_HEADERS = { 'X-Requested-With': 'XMLHttpRequest' };
-	var COMMON_HEADERS = { 'Accept': 'application/json, text/plain, */*' };
-	var JSON_CONTENT_TYPE = { 'Content-Type': 'application/json;charset=utf-8' };
-
-	function Http(options) {
-
-	    var self = this || {},
-	        client = Client(self.$vm);
-
-	    defaults(options || {}, self.$options, Http.options);
-
-	    Http.interceptors.forEach(function (handler) {
-	        client.use(handler);
-	    });
-
-	    return client(new Request(options)).then(function (response) {
-
-	        return response.ok ? response : PromiseObj.reject(response);
-	    }, function (response) {
-
-	        if (response instanceof Error) {
-	            error(response);
-	        }
-
-	        return PromiseObj.reject(response);
-	    });
-	}
-
-	Http.options = {};
-
-	Http.headers = {
-	    put: JSON_CONTENT_TYPE,
-	    post: JSON_CONTENT_TYPE,
-	    patch: JSON_CONTENT_TYPE,
-	    delete: JSON_CONTENT_TYPE,
-	    custom: CUSTOM_HEADERS,
-	    common: COMMON_HEADERS
-	};
-
-	Http.interceptors = [before, timeout, method, body, jsonp, header, cors];
-
-	['get', 'delete', 'head', 'jsonp'].forEach(function (method) {
-
-	    Http[method] = function (url, options) {
-	        return this(assign(options || {}, { url: url, method: method }));
-	    };
-	});
-
-	['post', 'put', 'patch'].forEach(function (method) {
-
-	    Http[method] = function (url, body, options) {
-	        return this(assign(options || {}, { url: url, method: method, body: body }));
-	    };
-	});
-
-	/**
-	 * Service for interacting with RESTful services.
-	 */
-
-	function Resource(url, params, actions, options) {
-
-	    var self = this || {},
-	        resource = {};
-
-	    actions = assign({}, Resource.actions, actions);
-
-	    each(actions, function (action, name) {
-
-	        action = merge({ url: url, params: assign({}, params) }, options, action);
-
-	        resource[name] = function () {
-	            return (self.$http || Http)(opts(action, arguments));
-	        };
-	    });
-
-	    return resource;
-	}
-
-	function opts(action, args) {
-
-	    var options = assign({}, action),
-	        params = {},
-	        body;
-
-	    switch (args.length) {
-
-	        case 2:
-
-	            params = args[0];
-	            body = args[1];
-
-	            break;
-
-	        case 1:
-
-	            if (/^(POST|PUT|PATCH)$/i.test(options.method)) {
-	                body = args[0];
-	            } else {
-	                params = args[0];
-	            }
-
-	            break;
-
-	        case 0:
-
-	            break;
-
-	        default:
-
-	            throw 'Expected up to 4 arguments [params, body], got ' + args.length + ' arguments';
-	    }
-
-	    options.body = body;
-	    options.params = assign({}, options.params, params);
-
-	    return options;
-	}
-
-	Resource.actions = {
-
-	    get: { method: 'GET' },
-	    save: { method: 'POST' },
-	    query: { method: 'GET' },
-	    update: { method: 'PUT' },
-	    remove: { method: 'DELETE' },
-	    delete: { method: 'DELETE' }
-
-	};
-
-	/**
-	 * Install plugin.
-	 */
-
-	function plugin(Vue) {
-
-	    if (plugin.installed) {
-	        return;
-	    }
-
-	    Util(Vue);
-
-	    Vue.url = Url;
-	    Vue.http = Http;
-	    Vue.resource = Resource;
-	    Vue.Promise = PromiseObj;
-
-	    Object.defineProperties(Vue.prototype, {
-
-	        $url: {
-	            get: function () {
-	                return options(Vue.url, this, this.$options.url);
-	            }
-	        },
-
-	        $http: {
-	            get: function () {
-	                return options(Vue.http, this, this.$options.http);
-	            }
-	        },
-
-	        $resource: {
-	            get: function () {
-	                return Vue.resource.bind(this);
-	            }
-	        },
-
-	        $promise: {
-	            get: function () {
-	                var _this = this;
-
-	                return function (executor) {
-	                    return new Vue.Promise(executor, _this);
-	                };
-	            }
-	        }
-
-	    });
-	}
-
-	if (typeof window !== 'undefined' && window.Vue) {
-	    window.Vue.use(plugin);
-	}
-
-	module.exports = plugin;
-
-/***/ },
-/* 134 */
-/***/ function(module, exports) {
-
-	"use strict";
-
-	Object.defineProperty(exports, "__esModule", {
-		value: true
-	});
-	exports.default = {
-		install: function install(Vue, options) {
-			/**
-	   * 公用接口请求函数
-	   */
-			Vue.prototype.$api = function (url) {
-				return this.$http.get("http://localhost:9900/" + url);
-			};
-		}
-	};
 
 /***/ }
 /******/ ]);

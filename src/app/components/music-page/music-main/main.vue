@@ -2,7 +2,7 @@
 	<div>
 		<ul class="music-main-ul">
 			<li v-for="tab in tabList" class="music-tab-item">
-				<router-link :to="'/index/music-main/' + tab.link" 
+				<router-link :to="tab.link" 
 					active-class="active" class="music-tab-link theme-fcolor-h-a theme-border-a">
 					{{ tab.name }}
 				</router-link>

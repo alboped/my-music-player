@@ -1,36 +1,35 @@
 import Vue from 'vue';
 import VueRouter from 'vue-router';
-import VueResource from 'vue-resource';
-import DataApi from './components/common/data-api';
+import Vuex from 'vuex';
+
+import store from './store/store';
 
 import filters from './filters/number-filter';
 
 import Main from './app.vue';
-import MusicPage from './components/music-page/main.vue';
-import SettingPage from './components/setting-page/main.vue';
-import MusicMain from './components/music-page/music-main/main.vue';
-import RadioPage from './components/music-page/radio.vue';
-import MySongList from './components/music-page/my-song-list.vue';
+import MusicPage from './components/music-page/main';
+import SettingPage from './components/setting-page/main';
+import MusicMain from './components/music-page/music-main/main';
+import RadioPage from './components/music-page/radio';
+import MySongList from './components/music-page/my-song-list';
 
-import LocalMusic from './components/my-music/local-music.vue';
-import DownloadManage from './components/my-music/download-manage.vue';
-import MySinger from './components/my-music/my-singer.vue';
+import LocalMusic from './components/my-music/local-music';
+import DownloadManage from './components/my-music/download-manage';
+import MySinger from './components/my-music/my-singer';
 
-import Recommend from './components/music-page/music-main/recommend/main.vue';
-import SongMenu from './components/music-page/music-main/song-menu.vue';
-import AnchorRadio from './components/music-page/music-main/anchor-radio.vue';
-import Ranking from './components/music-page/music-main/ranking.vue';
-import Singer from './components/music-page/music-main/singer.vue';
-import NewMusic from './components/music-page/music-main/new-music.vue';
+import Recommend from './components/music-page/music-main/recommend/main';
+import SongMenu from './components/music-page/music-main/song-menu';
+import AnchorRadio from './components/music-page/music-main/anchor-radio';
+import Ranking from './components/music-page/music-main/ranking';
+import Singer from './components/music-page/music-main/singer';
+import NewMusic from './components/music-page/music-main/new-music';
 
 require('./win');
 require('../sass/main.scss');
 
 Vue.use(VueRouter);
-Vue.use(VueResource);
-Vue.use(DataApi);
 
-/* 音乐首页标签路由 */
+/* 推荐页面标签路由 */
 const musicMainTabRouter = [
 	{
 		path: '/',
@@ -114,5 +113,5 @@ Object.keys(filters).forEach(key => Vue.filter(key, filters[key]));
 
 new Vue({
 	router,
-	url: 'http://24234'
+	store
 }).$mount('#app');

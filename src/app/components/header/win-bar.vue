@@ -16,7 +16,7 @@
 </template>
 
 <script>
-	import icon from '../common/icon.vue';
+	import icon from '../common/icon';
 
 	export default {
 		methods: {

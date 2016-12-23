@@ -1,5 +1,5 @@
 <template>
-	<div v-bind:class="mainClass">
+	<div v-bind:class="mainClass" @click="globalClick">
 		<header-main></header-main>
 		<div class="content">
 			<router-view></router-view>
@@ -9,8 +9,8 @@
 </template>
 
 <script>
-	import HeaderMain from './components/header/main.vue';
-	import FooterMain from './components/footer/main.vue';
+	import HeaderMain from './components/header/main';
+	import FooterMain from './components/footer/main';
 
 	const themeMap = ['blue', 'red']; // 主题类型
 
@@ -35,6 +35,11 @@
 			 */
 			changeTheme(themeName) {
 				themeMap.includes(themeName) && (this.mainTheme = themeName);
+			},
+			/* 全局点击事件 */
+			globalClick() {
+				/* 隐藏主题设置窗口 */
+				this.$store.commit('toggleThemeModelShow', false);
 			}
 		},
 		components: {

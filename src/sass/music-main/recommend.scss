@@ -165,14 +165,18 @@
 				font-size: 26px;
 				opacity: 0;
 				transition: opacity 300ms;
+				transition: background-color 200ms;
 			}
 			.re-song-item-link {
 				display: block;
 				position: relative;
 				line-height: 0;
 				margin-bottom: 3px;
-				&:hover .start-play-icon {
+				&:hover .re-play-icon {
 					opacity: 1;
+				}
+				.re-play-icon:hover {
+					background-color: rgba(0, 0, 0, 0.5);
 				}
 			}
 		}
@@ -251,17 +255,27 @@
 	}
 }
 
+/* 推荐mv */
 .re-mv {
 	margin-bottom: 50px;
 	.re-mv-list {
 		display: flex;
 		margin-left: -18px;
 		.re-mv-item {
-			flex-grow: 1;
+			flex: 1;
 			margin-left: 18px;
-			.re-mv-img {
+			.re-mv-link {
+				display: block;
+				position: relative;
 				width: 100%;
-				border: 1px solid rgba(0, 0, 0, .1);
+				padding-top: 56%;
+				.re-mv-img {
+					position: absolute;
+					top: 0;
+					width: 100%;
+					height: 100%;
+					border: 1px solid rgba(0, 0, 0, .1);
+				}
 			}
 		}
 	}

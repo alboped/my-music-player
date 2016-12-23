@@ -37,8 +37,8 @@ module.exports = function(app){
 		});
 	});
 
-	app.get('/song', function(req, res) {
-		spiders.getSong(req.query.id, function(data) {
+	app.get('/songinfo', function(req, res) {
+		spiders.getSongInfo(req.query.ids, function(data) {
 			res.send(data);
 		});
 	});

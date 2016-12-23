@@ -29,29 +29,25 @@
 </template>
 
 <script>
-	import icon from '../../../common/icon.vue';
-	import EventVue from '../../../common/events';
+	import icon from '../../../common/icon';
 
 	export default {
-		data() {
-			return {
-				songlist: []
+		computed: {
+			songlist() {
+				return this.$store.state.reStore.mainPage.songlist;
 			}
 		},
 		methods: {
 			startMusic(id) {
-				this.$api(`songmusiclist?id=${id}`).then(({body}) => {
-					EventVue.$emit('musicplayer', body);
-				});
+				this.$store.dispatch('getSongListIds', id);
 			}
 		},
 		components: {
 			icon
 		},
 		created() {
-			this.$api('songlist?limit=10').then(({body}) => {
-				this.songlist = body;
-			});
+			/* 初始化首页歌单列表 */
+			this.$store.dispatch('getMainSongList');
 		}
 	}
 </script>

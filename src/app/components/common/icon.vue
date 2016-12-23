@@ -6,7 +6,7 @@
 
 <script>
 	/* 阿里图标文件 */
-	require('../../../icon-font/iconfont.js');
+	require('../../../icon-font/iconfont');
 
 	export default {
 		props: ['iconHref']

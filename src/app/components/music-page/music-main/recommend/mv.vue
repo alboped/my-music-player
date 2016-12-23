@@ -7,8 +7,8 @@
 			</router-link>
 		</p>
 		<ul class="re-mv-list">
-			<li class="re-mv-item" v-for="mv in mvList">
-				<router-link to="/">
+			<li class="re-mv-item" v-for="mv in mvlist">
+				<router-link to="/" class="re-mv-link">
 					<img :src="mv.img" class="re-mv-img" alt="">
 				</router-link>
 				<p class="re-mv-item-title">
@@ -24,15 +24,14 @@
 
 <script>
 	export default {
-		data() {
-			return {
-				mvList: []
+		computed: {
+			mvlist() {
+				return this.$store.state.reStore.mainPage.remvlist;
 			}
 		},
 		created() {
-			this.$api('remvlist').then(({body}) => {
-				this.mvList = body;
-			});
+			/* 初始化首页mv列表 */
+			this.$store.dispatch('getReMvList');
 		}
 	}
 </script>

@@ -79,13 +79,10 @@ exports.getSongList = function(callback, limit) {
  * 获取歌单详细歌曲列表
  */
 exports.getSongMusicList = function(listId, callback){
-	console.log(listId);
 	startRequrest('http://music.baidu.com/songlist/' + listId, function($){
-		var ids = $('.songlist-list li').map(function(){
+		callback($('.songlist-list li').map(function(){
 			return $(this).data('songitem').songItem.sid;
-		}).get().join(',');
-
-		getSongLink(ids, callback);
+		}).get());
 	});
 }
 
@@ -126,7 +123,7 @@ exports.getReMvList = function(callback){
 /**
  * 根据歌曲ID获取歌曲文件信息
  */
-var getSongLink = function(ids, callback){
+exports.getSongLink = function(ids, callback){
 	startRequrest('http://play.baidu.com/data/music/songlink?songIds=' + 
 		ids + 
 		'&hq=0&type=m4a,mp3&rate=""&pt=0&flag=-1&s2p=-1&' + 
@@ -134,17 +131,9 @@ var getSongLink = function(ids, callback){
 	callback, 'json');
 }
 
-
 /**
  * 根据歌曲ID获取歌曲其他信息
  */
-exports.getSong = function(id, callback){
-	startRequrest('http://play.baidu.com/?_a=' + id, function($){
-		console.dir($('.album-wrapper'));
-		callback({
-			img: $('.album-wrapper img').attr('src')
-		});
-	});
+exports.getSongInfo = function(ids, callback){
+	startRequrest('http://play.baidu.com/data/music/songinfo?songIds=' + ids, callback, 'json');
 }
-
-exports.getSongLink = getSongLink;

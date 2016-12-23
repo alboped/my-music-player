@@ -10,9 +10,7 @@
 				</div>
 				<div class="width-drag-bar" @mousedown="dragDown"></div>
 			</div>
-			<div class="player-info">
-				<!-- <img src="" alt=""> -->
-			</div>
+			<music-info-bar class="player-info"></music-info-bar>
 		</div>
 		<div class="main-info">
 			<router-view class="music-main-info"></router-view>
@@ -22,21 +20,19 @@
 
 <script>
 	import $ from 'jquery';
-	import icon from '../common/icon.vue';
-	import leftMenu from './left-menu-ul.vue';
-	// import api from '../../api/api-main';
+	import icon from '../common/icon';
+	import leftMenu from './left-menu-ul';
+	import MusicInfoBar from './music-info/music-info-bar';
 
-	const dataList = require('../../data/left-menu.json');
-	const collectList = require('../../data/collect-song-list.json');
-	const createList = require('../../data/create-song-list.json');
+	const left_init_width = '200px';
 
 	export default {
 		data() {
 			return {
-				leftWidth: '200px',
-				dataList,
-				collectList,
-				createList,
+				leftWidth: left_init_width,
+				dataList: require('../../data/left-menu.json'),
+				collectList: require('../../data/collect-song-list.json'),
+				createList: require('../../data/create-song-list.json'),
 				hideList: [],
 				toggleIcon: 'angle-down'
 			}
@@ -60,7 +56,8 @@
 		},
 		components: {
 			icon,
-			leftMenu
+			leftMenu,
+			MusicInfoBar
 		}
 	}
 </script>

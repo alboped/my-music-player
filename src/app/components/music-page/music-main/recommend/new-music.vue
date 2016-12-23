@@ -7,7 +7,7 @@
 			</router-link>
 		</p>
 		<ul class="re-new-music-list">
-			<li class="re-new-music-item" v-for="(music, index) in musicList">
+			<li class="re-new-music-item" v-for="(music, index) in newMusicList">
 				<span class="re-new-music-index">{{ index + 1 | leftPolishing }}</span>
 				<a href="javascript:;" class="re-music-pic">
 					<img :src="music.img" alt="" class="re-music-img">
@@ -27,12 +27,15 @@
 </template>
 
 <script>
-	import icon from '../../../common/icon.vue';
+	import icon from '../../../common/icon';
 
 	export default {
-		props: [
-			'musicList'
-		],
+		computed: {
+			/* 首页新歌列表 */
+			newMusicList() {
+				return this.$store.state.reStore.mainPage.newMusicList;
+			}
+		},
 		components: {
 			icon
 		}
