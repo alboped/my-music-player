@@ -15,7 +15,7 @@
 </template>
 
 <script>
-	import icon from '../common/icon'; /* 图标 */
+	import icon from 'components/common/icon'; /* 图标 */
 	import themeModel from './theme-model'; /* 主题弹框 */
 
 	export default {

@@ -47,7 +47,7 @@
 
 <script>
 	import $ from 'jquery';
-	import icon from '../common/icon';
+	import icon from 'components/common/icon';
 	import player from './player';
 	import playerList from './player-list';
 

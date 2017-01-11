@@ -24,7 +24,7 @@
 </template>
 
 <script>
-	import icon from '../common/icon'; /* 图标 */
+	import icon from 'components/common/icon'; /* 图标 */
 	import winBar from './win-bar'; /* 窗口操作栏 */
 	import settingBar from './setting-bar'; /* 设置栏 */
 

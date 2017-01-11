@@ -32,7 +32,7 @@
 </template>
 
 <script>
-	import icon from '../common/icon'; /* 图标 */
+	import icon from 'components/common/icon'; /* 图标 */
 
 	export default {
 		data() {

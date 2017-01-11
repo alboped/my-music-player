@@ -13,7 +13,7 @@
 </template>
 
 <script>
-	import tabList from '../../../data/music-page-tab.json';
+	import tabList from 'app/data/music-page-tab.json';
 
 	export default {
 		data() {

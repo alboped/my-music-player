@@ -2,7 +2,7 @@
  * 首页初始化数据
  */
 
-import Api from '../../components/common/data-api';
+import Api from 'components/common/data-api';
 
 export default {
 	state: {

@@ -3,6 +3,8 @@ import VueResource from 'vue-resource';
 
 Vue.use(VueResource);
 
+const server_url = 'http://localhost:9900/';
+
 export default {
 	_api: (...urls) => {
 		/**
@@ -14,7 +16,7 @@ export default {
 			errorArray = [];
 
 		for(let url of urls){
-			httpGetList.push(Vue.http.get(`http://localhost:9900/${url}`));
+			httpGetList.push(Vue.http.get(server_url + url));
 		}
 
 		return {

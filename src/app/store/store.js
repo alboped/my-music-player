@@ -1,6 +1,6 @@
 import Vue from 'vue';
 import Vuex from 'vuex';
-import Api from '../components/common/data-api';
+import Api from 'components/common/data-api';
 
 import state from './state';
 import actions from './actions';

@@ -32,7 +32,11 @@ module.exports = {
 	resolve: {
 		extensions: ['', '.js', '.vue'],
 		alias: {
-			vue: 'vue/dist/vue.js'
+			vue: 'vue/dist/vue.js',
+			src: path.join(__dirname, 'src'),
+			app: path.join(__dirname, 'src/app'),
+			components: path.join(__dirname, 'src/app/components'),
+			sass: path.join(__dirname, 'src/sass')
 		}
 	},
 	plugins: [
@@ -43,5 +47,5 @@ module.exports = {
 			cache: true,
 			showErrors: true
 		})
-	]
+	] 
 }

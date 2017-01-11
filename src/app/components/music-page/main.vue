@@ -20,7 +20,7 @@
 
 <script>
 	import $ from 'jquery';
-	import icon from '../common/icon';
+	import icon from 'components/common/icon';
 	import leftMenu from './left-menu-ul';
 	import MusicInfoBar from './music-info/music-info-bar';
 

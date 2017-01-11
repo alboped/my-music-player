@@ -19,7 +19,7 @@
 </template>
 
 <script>
-	import icon from '../common/icon';
+	import icon from 'components/common/icon';
 
 	export default {
 		data() {

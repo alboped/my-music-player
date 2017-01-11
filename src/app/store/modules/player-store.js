@@ -2,7 +2,7 @@
  * 播放列表数据操作
  */
 
-import Api from '../../components/common/data-api';
+import Api from 'components/common/data-api';
 
 export default {
 	state: {

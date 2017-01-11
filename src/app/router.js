@@ -7,25 +7,25 @@ import store from './store/store';
 import filters from './filters/number-filter';
 
 import Main from './app.vue';
-import MusicPage from './components/music-page/main';
-import SettingPage from './components/setting-page/main';
-import MusicMain from './components/music-page/music-main/main';
-import RadioPage from './components/music-page/radio';
-import MySongList from './components/music-page/my-song-list';
+import MusicPage from 'components/music-page/main';
+import SettingPage from 'components/setting-page/main';
+import MusicMain from 'components/music-page/music-main/main';
+import RadioPage from 'components/music-page/radio';
+import MySongList from 'components/music-page/my-song-list';
 
-import LocalMusic from './components/my-music/local-music';
-import DownloadManage from './components/my-music/download-manage';
-import MySinger from './components/my-music/my-singer';
+import LocalMusic from 'components/my-music/local-music';
+import DownloadManage from 'components/my-music/download-manage';
+import MySinger from 'components/my-music/my-singer';
 
-import Recommend from './components/music-page/music-main/recommend/main';
-import SongMenu from './components/music-page/music-main/song-menu';
-import AnchorRadio from './components/music-page/music-main/anchor-radio';
-import Ranking from './components/music-page/music-main/ranking';
-import Singer from './components/music-page/music-main/singer';
-import NewMusic from './components/music-page/music-main/new-music';
+import Recommend from 'components/music-page/music-main/recommend/main';
+import SongMenu from 'components/music-page/music-main/song-menu';
+import AnchorRadio from 'components/music-page/music-main/anchor-radio';
+import Ranking from 'components/music-page/music-main/ranking';
+import Singer from 'components/music-page/music-main/singer';
+import NewMusic from 'components/music-page/music-main/new-music';
 
 require('./win');
-require('../sass/main.scss');
+require('sass/main.scss');
 
 Vue.use(VueRouter);
 

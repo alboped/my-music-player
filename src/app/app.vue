@@ -9,8 +9,8 @@
 </template>
 
 <script>
-	import HeaderMain from './components/header/main';
-	import FooterMain from './components/footer/main';
+	import HeaderMain from 'components/header/main';
+	import FooterMain from 'components/footer/main';
 
 	const themeMap = ['blue', 'red']; // 主题类型
 
